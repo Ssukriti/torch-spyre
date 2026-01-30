@@ -1181,8 +1181,35 @@ for i in "${!RUN_FILES[@]}"; do
     _exit=0
     (
         cd "$run_dir"
-        python3 -m pytest "$run_basename" "${_FILE_PYTEST_ARGS[@]}"
-        echo $? > "/tmp/_spyre_pytest_exit_$$.tmp"
+        # Check if this is a distributed test (in tests/distributed/ directory)
+        if [[ "$run_dir" == *"/distributed"* ]] || [[ "$run_dir" == *"/distributed" ]]; then
+            # Check that AIU_WORLD_SIZE is set
+            if [[ -z "${AIU_WORLD_SIZE:-}" ]]; then
+                echo "Error: AIU_WORLD_SIZE environment variable is not set" >&2
+                exit 1
+            fi
+            # Use torchrun for distributed tests
+            _NPROC="${AIU_WORLD_SIZE}"
+            echo "[spyre_run] Running distributed test with torchrun (nproc=$_NPROC)"
+
+            # Set environment variables for split_output.sh
+            export _LOGDIR=/tmp/pytest-torch-spyre-dist
+            export _SHOW_PROGRESS=1
+
+            # Create log directory
+            mkdir -p "${_LOGDIR}"
+
+            # Run with split_output.sh wrapper
+            torchrun --nproc-per-node "$_NPROC" --no-python bash "${run_dir}/split_output.sh" python3 -u -m pytest "$run_basename" "${_FILE_PYTEST_ARGS[@]}"
+            echo $? > "/tmp/_spyre_pytest_exit_$$.tmp"
+
+            # Clean up log directory
+            rm -rf "${_LOGDIR}"
+        else
+            # Regular pytest for non-distributed tests
+            python3 -m pytest "$run_basename" "${_FILE_PYTEST_ARGS[@]}"
+            echo $? > "/tmp/_spyre_pytest_exit_$$.tmp"
+        fi
     ) || true
 
     # Read the real pytest exit code written from inside the subshell.

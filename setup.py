@@ -31,6 +31,7 @@ from setuptools import Command, setup
 
 PATH_NAME = "torch_spyre"
 PACKAGE_NAME = "torch_spyre"
+DISTRIBUTED_PACKAGE_NAME = "spyre_ccl"
 
 
 def get_torch_spyre_version() -> str:
@@ -54,6 +55,7 @@ def check_libflex():
 
 ROOT_DIR = Path(__file__).absolute().parent
 CSRC_DIR = ROOT_DIR / PATH_NAME / "csrc"
+DISTRIBUTED_SRC_DIR = CSRC_DIR / "distributed"
 
 
 # Automatically download json.hpp if not present
@@ -111,10 +113,18 @@ if "RUNTIME_INSTALL_DIR" in os.environ:
         DEEPTOOLS_DIR / "include",
     ]
     LIBRARY_DIRS += [RUNTIME_DIR / "lib"]
+if "SPYRE_COMMS_INSTALL_DIR" in os.environ:
+    SPYRE_COMMS_DIR = Path(os.environ["SPYRE_COMMS_INSTALL_DIR"])
+    INCLUDE_DIRS += [
+        SPYRE_COMMS_DIR / "include",
+    ]
+    LIBRARY_DIRS += [SPYRE_COMMS_DIR / "lib"]
+else:
+    raise RuntimeError("SPYRE_COMMS_INSTALL_DIR not set")
 
 INCLUDE_DIRS += [os.environ["SEN_COMMON_HEADERS"]]
 
-LIBRARIES = ["sendnn", "sendnn_interface", "flex"]
+LIBRARIES = ["sendnn", "sendnn_interface", "flex", "spyre_comms"]
 
 # FIXME: added no-deprecated as this fails in sentensor_shape.hpp
 # - we need to fix there
@@ -123,7 +133,7 @@ LIBRARIES = ["sendnn", "sendnn_interface", "flex"]
 # Set TORCH_SPYRE_DEBUG=1 to build with -O0 for easier debugging
 NO_OPT_BUILD = os.environ.get("TORCH_SPYRE_DEBUG", "0") == "1"
 
-EXTRA_CXX_FLAGS = ["-g", "-Wall", "-Wno-deprecated", "-std=c++17"]
+EXTRA_CXX_FLAGS = ["-g", "-Wall", "-Wno-deprecated", "-std=c++20"]
 if NO_OPT_BUILD:
     EXTRA_CXX_FLAGS += ["-O0"]
 
@@ -167,6 +177,7 @@ if __name__ == "__main__":
         from torch.utils.cpp_extension import BuildExtension, CppExtension
 
         sources = list(CSRC_DIR.glob("*.cpp"))
+        distributed_sources = list(DISTRIBUTED_SRC_DIR.glob("*.cpp"))
 
         # Filenames that belong to the tiny hooks module.
         # "shared" files are compiled into both _hooks.so and _C.so.
@@ -182,11 +193,14 @@ if __name__ == "__main__":
         core_src_paths = [
             p.relative_to(ROOT_DIR).as_posix() for p in sorted(core_src_paths)
         ]
+        distributed_src_paths = [
+            p.relative_to(ROOT_DIR).as_posix() for p in sorted(distributed_sources)
+        ]
 
         ext_modules = [
             CppExtension(
                 name=f"{PACKAGE_NAME}._C",
-                sources=core_src_paths,
+                sources=core_src_paths + distributed_src_paths,
                 include_dirs=[str(p) for p in INCLUDE_DIRS],
                 library_dirs=[str(p) for p in LIBRARY_DIRS],
                 libraries=LIBRARIES,
