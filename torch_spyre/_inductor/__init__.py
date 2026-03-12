@@ -14,9 +14,9 @@
 
 from .constants import DEVICE_NAME
 from .patches import enable_spyre_context
-
 import threading
 from functools import wraps
+from torch_spyre._inductor.distributed import lower_collectives
 
 _autoload_lock = threading.Lock()
 
@@ -106,6 +106,13 @@ def enable_spyre_compile_fx_wrapper():
                     # and yielded as `spyre_context_decompositions` from the CM
 
                     kwargs["decompositions"] = spyre_context_decompositions
+                    print("FX graph before lowering")
+                    print(gm.graph)
+                    # Apply Spyre collective lowering
+                    gm = lower_collectives(gm)
+
+                    print("FX graph after lowering")
+                    print(gm.graph)
 
                     return _orig(
                         gm,
