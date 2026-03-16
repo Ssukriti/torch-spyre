@@ -1,5 +1,5 @@
 import torch
-from .spyre_ops import spyre_all_reduce, spyre_all_reduce_async, spyre_wait
+from .spyre_ops import spyre_all_reduce_async, spyre_wait
 
 LOWERED_OPS = {}
 
