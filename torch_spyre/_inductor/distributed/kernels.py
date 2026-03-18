@@ -1,15 +1,13 @@
 import torch
 import torch.distributed as dist
-import torch.distributed.distributed_c10d as c10d
 from torch.library import Library
+import torch.distributed.distributed_c10d as c10d
 
 if not hasattr(torch, "_spyre_distributed_kernels_registered"):
     torch._spyre_distributed_kernels_registered = True
 
     # ------------------------------------------------------------
     # Placeholder kernels for original functional collectives
-    # on Spyre tensors, so tracing / eager paths do not fail
-    # before lowering happens.
     # ------------------------------------------------------------
     c10d_lib = Library("_c10d_functional", "IMPL", "AutogradPrivateUse1")
 
@@ -25,12 +23,12 @@ if not hasattr(torch, "_spyre_distributed_kernels_registered"):
     c10d_lib.impl("wait_tensor", spyre_wait_tensor)
 
     # ------------------------------------------------------------
-    # CPU impl: reference path that stays entirely on CPU
+    # CPU runtime kernel
     # ------------------------------------------------------------
     spyre_cpu = Library("spyre", "IMPL", "CPU")
 
     def spyre_all_reduce_cpu(x, reduce_op="sum", group_name="default"):
-        print("Spyre all_reduce called on CPU")
+        print("REAL spyre custom_op runtime called on CPU")
 
         reduce_map = {
             "sum": dist.ReduceOp.SUM,
@@ -48,48 +46,29 @@ if not hasattr(torch, "_spyre_distributed_kernels_registered"):
     spyre_cpu.impl("all_reduce", spyre_all_reduce_cpu)
 
     # ------------------------------------------------------------
-    # Lowered Spyre op implementation for Spyre tensors
+    # Spyre runtime kernel
     # ------------------------------------------------------------
-    spyre_impl = Library("spyre", "IMPL", "AutogradPrivateUse1")
+    spyre_privateuse1 = Library("spyre", "IMPL", "AutogradPrivateUse1")
 
-    def spyre_all_reduce_impl(x, reduce_op="sum", group_name="default"):
-        print("Spyre all_reduce called")
+    def spyre_all_reduce_privateuse1(x, reduce_op="sum", group_name="default"):
+        print("REAL spyre custom_op runtime called on Spyre tensor")
 
         cpu_tensor = x.detach().clone().cpu().contiguous()
 
+        # Get default process group
+        pg = c10d._get_default_group()
+
         reduce_map = {
-            "sum": dist.ReduceOp.SUM,
-            "avg": dist.ReduceOp.AVG,
-            "max": dist.ReduceOp.MAX,
-            "min": dist.ReduceOp.MIN,
+           "sum": c10d.ReduceOp.SUM,
+           "avg": c10d.ReduceOp.AVG,
+           "max": c10d.ReduceOp.MAX,
+           "min": c10d.ReduceOp.MIN,
         }
-        op = reduce_map.get(str(reduce_op), dist.ReduceOp.SUM)
+        op = reduce_map.get(str(reduce_op), c10d.ReduceOp.SUM)
 
-        if dist.is_initialized():
-            # Trial Use the process group API directly instead of dist.all_reduce
-            # to try avoid surfacing c10d.allreduce_.default in the compiled path.
-            # update: did not help
-            if group_name == "default":
-                pg = c10d._get_default_group()
-            else:
-                # just a stub
-                pg = c10d._get_default_group()
+        # IMPORTANT: list of tensors
+        work = pg.barrier()
+        work.wait()
+        return x
 
-            work = pg.allreduce([cpu_tensor], op)
-            work.wait()
-
-        out = torch.empty_like(cpu_tensor, device=x.device)
-        out.copy_(cpu_tensor)
-        return out
-
-    spyre_impl.impl("all_reduce", spyre_all_reduce_impl)
-
-    # ------------------------------------------------------------
-    # Meta impl for tracing / fake tensor propagation
-    # ------------------------------------------------------------
-    spyre_meta = Library("spyre", "IMPL", "Meta")
-
-    def spyre_all_reduce_meta(x, reduce_op="sum", group_name="default"):
-        return torch.empty_like(x, device="meta")
-
-    spyre_meta.impl("all_reduce", spyre_all_reduce_meta)
+    spyre_privateuse1.impl("all_reduce", spyre_all_reduce_privateuse1)
