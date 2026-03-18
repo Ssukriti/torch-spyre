@@ -97,6 +97,7 @@ def enable_spyre_compile_fx_wrapper():
 
             
             # allowing lowering for any devices - to show CPU and Spyre demo
+            # only a temporary change to enable CPU demo 
             #if _uses_spyre(gm, example_inputs):
             if 1:
                 torch.spyre._impl._lazy_init()
