@@ -133,19 +133,24 @@ def pytest_addoption(parser):
         dest="dedupe",
         help="Disable deduplication.",
     )
+    parser.addoption(
+        "--no-device-replace",
+        action="store_true",
+        help="Disable cuda device replacement in kwargs.",
+    )
 
     # NEW: inventory modes
     parser.addoption(
         "--list-models",
         action="store_true",
         default=False,
-        help="List models found in tests/_inductor/models/*.yaml and exit.",
+        help="List models found in tests/resource/models/*.yaml and exit.",
     )
     parser.addoption(
         "--list-cases",
         action="store_true",
         default=False,
-        help="List cases found in tests/_inductor/models/*.yaml and exit. Use --model to filter.",
+        help="List cases found in tests/resource/models/*.yaml and exit. Use --model to filter.",
     )
     parser.addoption(
         "--compile-backend",
@@ -188,7 +193,7 @@ def pytest_addoption(parser):
 
 
 def _models_dir(rootpath: Path) -> Path:
-    return rootpath / "tests" / "_inductor" / "models"
+    return rootpath / "tests" / "resource" / "models"
 
 
 def load_yaml_or_fail(path: Path) -> dict:
@@ -276,7 +281,7 @@ def compile_backend(pytestconfig):
 def pytest_configure(config):
     shared_config._PYTEST_CONFIG = config
     # auto-register model_<name> markers based on YAML files
-    mdir = config.rootpath / "tests" / "_inductor" / "models"
+    mdir = config.rootpath / "tests" / "resource" / "models"
     for p in mdir.glob("*.yaml"):
         spec = load_yaml_or_fail(p)
         model = spec.get("model", p.stem)
@@ -286,6 +291,27 @@ def pytest_configure(config):
         config.addinivalue_line(
             "markers", f"{mark}: auto-generated mark for model {model}"
         )
+
+    # ── register upstream test tags from PYTORCH_TEST_CONFIG YAML ──
+    # Tags defined under test_suite_config.files[].tests[].tags are registered
+    # here so pytest does not emit PytestUnknownMarkWarning.
+    # Each tag becomes a pytest mark usable with -m for test selection:
+    #   pytest test_binary_ufuncs.py -m "model_1"
+    #   pytest test_ops.py -m "model_2"
+    yaml_path = os.environ.get("PYTORCH_TEST_CONFIG")
+    if yaml_path and Path(yaml_path).exists():
+        with open(yaml_path) as f:
+            raw = yaml.safe_load(f) or {}
+        tags: set = set()
+        for file_entry in raw.get("test_suite_config", {}).get("files", []):
+            for test_entry in file_entry.get("tests", []):
+                for tag in test_entry.get("tags", []):
+                    tags.add(tag)
+        for tag in sorted(tags):
+            config.addinivalue_line(
+                "markers",
+                f"{tag}: tests that depend on or are relevant to '{tag}'",
+            )
 
 
 def pytest_collection_modifyitems(config, items):
@@ -299,7 +325,8 @@ def pytest_collection_modifyitems(config, items):
 
     for item in items:
         # item.nodeid includes the file path, e.g. "tests/models/test_model_ops.py::test_model_ops[...]"
-        if "tests/models/test_model_ops.py::" in item.nodeid:
+        # if "tests/models/test_model_ops.py::" in item.nodeid:
+        if "tests/models/test_model_ops" in item.nodeid:
             keep.append(item)
         else:
             deselect.append(item)

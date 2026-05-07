@@ -3,8 +3,7 @@ requires = [
     # any change here should be reflected in the build dependencies below
     "build",  # only required to build torch_sendnn
     "cmake>=3.27,<4.0.0",
-    "expecttest>=0.3.0",
-    "hypothesis",
+    "expecttest>=0.3.0", # imported by torch.testing._internal.common_utils
     "jinja2",
     "ninja",
     "numpy",
@@ -38,8 +37,7 @@ build = [ # no-isolation build
     # any change here should be reflected in the build system above
     "build",  # only required to build torch_sendnn
     "cmake>=3.27,<4.0.0",
-    "expecttest>=0.3.0",
-    "hypothesis",
+    "expecttest>=0.3.0", # imported by torch.testing._internal.common_utils
     "jinja2",
     "ninja",
     "numpy",
@@ -52,6 +50,7 @@ build = [ # no-isolation build
 ]
 test = [
     "pytest~=9.0.0",
+    "pydantic", # needed by test framework to support pydantic models for config
 #    "torch_sendnn", # must be installed manually
     "transformers~=4.57.1"
 ]
@@ -94,6 +93,7 @@ filterwarnings = [
     # https://github.com/pytorch/pytorch/blob/v2.10.0/torch/jit/_script.py#L363
     "ignore::DeprecationWarning:torch.jit._script",
 ]
+norecursedirs = ['tests/models']
 
 [tool.uv]
 required-version = ">=0.9.0"

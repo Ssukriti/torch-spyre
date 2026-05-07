@@ -28,10 +28,10 @@ from torch.testing._internal.opinfo.core import (
     OpInfo,
 )
 from torch.testing._internal.common_device_type import (
-    PrivateUse1TestBase,
     ops,
     instantiate_device_type_tests,
 )
+from torch.testing._internal.common_utils import TestCase
 from op_registry import OP_REGISTRY, OpAdapter
 
 
@@ -110,7 +110,7 @@ _init_model_ops_db()
 seen_case_keys = set()
 
 
-class TestSpyreModelOps(PrivateUse1TestBase):
+class TestSpyreModelOps(TestCase):
     @ops(model_ops_db)
     def test_model_ops_db(
         self,
@@ -125,6 +125,9 @@ class TestSpyreModelOps(PrivateUse1TestBase):
             pytestconfig.getoption("--compile-backend") or "inductor"
         ).strip()
         allowed_test_names = pytestconfig.getoption("--test-name")
+        device_replace_disabled = bool(
+            pytestconfig.getoption("--no-device-replace", default=False)
+        )
 
         method_name = self._testMethodName
 
@@ -185,13 +188,17 @@ class TestSpyreModelOps(PrivateUse1TestBase):
         description = case.get("description")
 
         # Build CPU args ONCE, then copy to Spyre (identical values)
-        cpu_sample = make_SampleInput(case, seed, dtype)
+        cpu_sample = make_SampleInput(
+            case, seed, dtype, None if device_replace_disabled else test_device
+        )
 
         def to_spyre(arg):
             if isinstance(arg, list):
                 return [x.to(test_device) for x in arg]
+            elif isinstance(arg, torch.Tensor):
+                return arg.to(test_device)
             else:
-                return arg.to(device=test_device)
+                return arg
 
         test_sample = cpu_sample.transform(to_spyre)
 
@@ -214,4 +221,4 @@ class TestSpyreModelOps(PrivateUse1TestBase):
 
 # Instantiate device type tests for the TestSpyreModelOps class
 # This is required for @ops decorator to work properly
-instantiate_device_type_tests(TestSpyreModelOps, globals())
+instantiate_device_type_tests(TestSpyreModelOps, globals(), only_for=("privateuse1",))

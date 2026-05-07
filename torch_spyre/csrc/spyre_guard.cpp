@@ -18,6 +18,10 @@
 
 #include <ATen/core/op_registration/adaption.h>
 
+#include "module.h"
+#include "spyre_device_enum.h"
+#include "spyre_stream.h"
+
 namespace spyre {
 
 c10::DeviceType SpyreGuardImpl::type() const {
@@ -43,22 +47,61 @@ void SpyreGuardImpl::setDevice(c10::Device d) const {
 void SpyreGuardImpl::uncheckedSetDevice(c10::Device) const noexcept {}
 
 c10::DeviceIndex SpyreGuardImpl::deviceCount() const noexcept {
-  //  FIXME (tmhoangt) - return actual device count
-  return 1;
+  return c10::DeviceIndex(getVisibleDeviceCount());
 }
 
-// Do Spyre have streams, override
-// getStream/exchangeStream/.../recordDataPtrOnStream
 c10::Stream SpyreGuardImpl::getStream(c10::Device device) const {
-  return c10::Stream(c10::Stream::Default::DEFAULT, device);
+  return getCurrentStream(device).unwrap();
+}
+
+c10::Stream SpyreGuardImpl::getNewStream(c10::Device device,
+                                         int priority) const {
+  return getStreamFromPool(device, priority).unwrap();
+}
+
+void SpyreGuardImpl::synchronizeStream(const c10::Stream& stream) const {
+  TORCH_CHECK(stream.device().type() == this->type());
+  SpyreStream(stream).synchronize();
+}
+
+bool SpyreGuardImpl::queryStream(const c10::Stream& stream) const {
+  TORCH_CHECK(stream.device().type() == this->type());
+  return SpyreStream(stream).query();
+}
+
+void SpyreGuardImpl::synchronizeDevice(c10::DeviceIndex device_index) const {
+  c10::Device dev(c10::DeviceType::PrivateUse1, device_index);
+  spyre::synchronizeDevice(dev);
 }
 
 c10::Stream SpyreGuardImpl::exchangeStream(c10::Stream stream) const {
-  return stream;
+  SpyreStream ss(stream);
+
+  c10::Stream old = getCurrentStream(stream.device()).unwrap();
+
+  // Set TLS current stream for THAT device index
+  setCurrentStream(ss);
+
+  return old;
 }
 
 void SpyreGuardImpl::recordDataPtrOnStream(const c10::DataPtr&,
                                            const c10::Stream&) const {}
+
+c10::DeviceCapability SpyreGuardImpl::getDeviceCapability(
+    c10::Device /*unused*/) const {
+  c10::DeviceCapability cap{};
+
+  cap.capability_data.capability_bits =
+      (1ULL << c10::kIndex_Float) | (1ULL << c10::kIndex_Half) |
+      (1ULL << c10::kIndex_Bool) | (1ULL << c10::kIndex_Char) |
+      (1ULL << c10::kIndex_Byte) | (1ULL << c10::kIndex_Short) |
+      (1ULL << c10::kIndex_Int4) | (1ULL << c10::kIndex_BFloat16) |
+      (1ULL << c10::kIndex_Float8_e4m3fn) |
+      (1ULL << c10::kIndex_Float8_e5m2fnuz);
+
+  return cap;
+}
 
 thread_local c10::DeviceIndex SpyreGuardImpl::tls_idx = 0;
 

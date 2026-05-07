@@ -50,6 +50,8 @@ class TestBuildingBlocks(unittest.TestCase):
             torch.full([D, T], threshold, dtype=torch.float16),
             torch.full([D, T], 1.0, dtype=torch.float16),
             torch.full([D, T], -1.0, dtype=torch.float16),
+            # aten::where.self is not registered for the Spyre eager dispatch
+            run_eager=False,
         )
 
     def test__simple_attn(self):
@@ -74,6 +76,9 @@ class TestBuildingBlocks(unittest.TestCase):
             k,
             v,
             sm_scale.repeat(k.shape[0]),
+            # mm on Spyre tensors segfaults in libsenlib without the torch.compile
+            # execution context that normally initialises the hardware session
+            run_eager=False,
         )
 
     def test_mlp(self):
@@ -100,6 +105,7 @@ class TestBuildingBlocks(unittest.TestCase):
             gate_proj_weight,
             up_proj_weight,
             down_proj_weight,
+            cpu_compile=True,
         )
 
     def test_rms_norm(self):
@@ -145,4 +151,4 @@ class TestBuildingBlocks(unittest.TestCase):
         compare_with_pytorch(rms_norm, pytorch_fn, *args)
 
         # Compare with cpu implementation
-        compare_with_cpu(rms_norm, *args)
+        compare_with_cpu(rms_norm, *args, cpu_compile=True)

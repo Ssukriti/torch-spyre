@@ -10,20 +10,27 @@ cases:
     inputs:
       - tensor:
           shape: [1, 14]
+          stride: [14, 1]
+          storage_offset: 0
           dtype: torch.int64
+          device: cuda:0
           init: randint
           init_args:
             high: 1000
       - tensor:
           shape: [131072, 5120]
+          stride: [5120, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - value: 11
       - value: null
       - value: 2.0
       - value: false
       - value: false
-    description: 'site-packages/transformers/models/mistral3/modeling_mistral3.py:311 in forward, code: inputs_embeds = self.get_input_embeddings()(input_ids)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/mistral3/modeling_mistral3.py#L311 in forward, code: inputs_embeds
+      = self.get_input_embeddings()(input_ids)'
     marks:
       - bf16operation
       - constant
@@ -32,11 +39,14 @@ cases:
     inputs:
       - tensor:
           shape: [64]
+          stride: [1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
       - py: (None, slice(None, None, None), None)
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:329 in forward, code: inv_freq_expanded = self.inv_freq[None, :, None].float().expand(position_ids.shape[0],
-      -1, 1).to(x.device)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L329 in forward, code:
+      inv_freq_expanded = self.inv_freq[None, :, None].float().expand(position_ids.shape[0], -1, 1).to(x.device)'
     marks:
       - fp32operation
       - constant
@@ -45,23 +55,29 @@ cases:
     inputs:
       - tensor:
           shape: [1, 64, 1]
+          stride: [64, 1, 1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:329 in forward, code: inv_freq_expanded = self.inv_freq[None, :, None].float().expand(position_ids.shape[0],
-      -1, 1).to(x.device)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L329 in forward, code:
+      inv_freq_expanded = self.inv_freq[None, :, None].float().expand(position_ids.shape[0], -1, 1).to(x.device)'
     marks: fp32operation
   - name: torch.Tensor.expand.1
     op: torch.Tensor.expand
     inputs:
       - tensor:
           shape: [1, 64, 1]
+          stride: [64, 1, 1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
       - value: 1
       - value: -1
       - value: 1
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:329 in forward, code: inv_freq_expanded = self.inv_freq[None, :, None].float().expand(position_ids.shape[0],
-      -1, 1).to(x.device)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L329 in forward, code:
+      inv_freq_expanded = self.inv_freq[None, :, None].float().expand(position_ids.shape[0], -1, 1).to(x.device)'
     marks:
       - fp32operation
       - constant
@@ -70,11 +86,14 @@ cases:
     inputs:
       - tensor:
           shape: [1, 64, 1]
+          stride: [64, 1, 1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
       - value: cuda:0
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:329 in forward, code: inv_freq_expanded = self.inv_freq[None, :, None].float().expand(position_ids.shape[0],
-      -1, 1).to(x.device)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L329 in forward, code:
+      inv_freq_expanded = self.inv_freq[None, :, None].float().expand(position_ids.shape[0], -1, 1).to(x.device)'
     marks:
       - fp32operation
       - constant
@@ -83,60 +102,78 @@ cases:
     inputs:
       - tensor:
           shape: [1, 14]
+          stride: [14, 1]
+          storage_offset: 0
           dtype: torch.int64
+          device: cuda:0
           init: randint
           init_args:
             high: 1000
       - py: (slice(None, None, None), None, slice(None, None, None))
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:330 in forward, code: position_ids_expanded = position_ids[:, None,
-      :].float()'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L330 in forward, code:
+      position_ids_expanded = position_ids[:, None, :].float()'
     marks: constant
   - name: torch.float.2
     op: torch.float
     inputs:
       - tensor:
           shape: [1, 1, 14]
+          stride: [14, 14, 1]
+          storage_offset: 0
           dtype: torch.int64
+          device: cuda:0
           init: randint
           init_args:
             high: 1000
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:330 in forward, code: position_ids_expanded = position_ids[:, None,
-      :].float()'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L330 in forward, code:
+      position_ids_expanded = position_ids[:, None, :].float()'
   - name: torch.float.3
     op: torch.float
     inputs:
       - tensor:
           shape: [1, 1, 14]
+          stride: [14, 14, 1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:334 in forward, code: freqs = (inv_freq_expanded.float() @ position_ids_expanded.float()).transpose(1,
-      2)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L334 in forward, code:
+      freqs = (inv_freq_expanded.float() @ position_ids_expanded.float()).transpose(1, 2)'
     marks: fp32operation
   - name: torch.matmul.1
     op: torch.matmul
     inputs:
       - tensor:
           shape: [1, 64, 1]
+          stride: [64, 1, 1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
       - tensor:
           shape: [1, 1, 14]
+          stride: [14, 14, 1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:334 in forward, code: freqs = (inv_freq_expanded.float() @ position_ids_expanded.float()).transpose(1,
-      2)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L334 in forward, code:
+      freqs = (inv_freq_expanded.float() @ position_ids_expanded.float()).transpose(1, 2)'
     marks: fp32operation
   - name: torch.transpose.1
     op: torch.transpose
     inputs:
       - tensor:
           shape: [1, 64, 14]
+          stride: [896, 14, 1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
       - value: 1
       - value: 2
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:334 in forward, code: freqs = (inv_freq_expanded.float() @ position_ids_expanded.float()).transpose(1,
-      2)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L334 in forward, code:
+      freqs = (inv_freq_expanded.float() @ position_ids_expanded.float()).transpose(1, 2)'
     marks:
       - fp32operation
       - constant
@@ -145,12 +182,19 @@ cases:
     inputs:
       - tensor_list:
           - shape: [1, 14, 64]
+            stride: [896, 1, 14]
+            storage_offset: 0
             dtype: torch.float32
+            device: cuda:0
             init: rand
           - shape: [1, 14, 64]
+            stride: [896, 1, 14]
+            storage_offset: 0
             dtype: torch.float32
+            device: cuda:0
             init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:335 in forward, code: emb = torch.cat((freqs, freqs), dim=-1)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L335 in forward, code:
+      emb = torch.cat((freqs, freqs), dim=-1)'
     marks:
       - fp32operation
       - constant
@@ -161,19 +205,27 @@ cases:
     inputs:
       - tensor:
           shape: [1, 14, 128]
+          stride: [1792, 128, 1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:336 in forward, code: cos = emb.cos() * self.attention_scaling'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L336 in forward, code:
+      cos = emb.cos() * self.attention_scaling'
     marks: fp32operation
   - name: torch.mul.1
     op: torch.mul
     inputs:
       - tensor:
           shape: [1, 14, 128]
+          stride: [1792, 128, 1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
       - value: 1.0
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:336 in forward, code: cos = emb.cos() * self.attention_scaling'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L336 in forward, code:
+      cos = emb.cos() * self.attention_scaling'
     marks:
       - fp32operation
       - constant
@@ -182,36 +234,49 @@ cases:
     inputs:
       - tensor:
           shape: [1, 14, 128]
+          stride: [1792, 128, 1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:337 in forward, code: sin = emb.sin() * self.attention_scaling'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L337 in forward, code:
+      sin = emb.sin() * self.attention_scaling'
     marks: fp32operation
   - name: torch.to.2
     op: torch.to
     inputs:
       - tensor:
           shape: [1, 14, 128]
+          stride: [1792, 128, 1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:339 in forward, code: return cos.to(dtype=x.dtype), sin.to(dtype=x.dtype)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L339 in forward, code:
+      return cos.to(dtype=x.dtype), sin.to(dtype=x.dtype)'
     marks: fp32operation
     kwmap:
-      dtype: torch.float16
+      dtype: torch.bfloat16
   - name: torch._C._log_api_usage_once.1
     op: torch._C._log_api_usage_once
     inputs:
       - value: python.nn_module
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:405 in forward, code: for decoder_layer in self.layers[: self.config.num_hidden_layers]:'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L405 in forward, code:
+      for decoder_layer in self.layers[: self.config.num_hidden_layers]:'
     marks: constant
   - name: torch.pow.1
     op: torch.pow
     inputs:
       - tensor:
           shape: [1, 14, 5120]
+          stride: [71680, 5120, 1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
       - value: 2
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:207 in forward, code: variance = hidden_states.pow(2).mean(-1, keepdim=True)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L207 in forward, code:
+      variance = hidden_states.pow(2).mean(-1, keepdim=True)'
     marks:
       - fp32operation
       - constant
@@ -220,10 +285,14 @@ cases:
     inputs:
       - tensor:
           shape: [1, 14, 5120]
+          stride: [71680, 5120, 1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
       - value: -1
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:207 in forward, code: variance = hidden_states.pow(2).mean(-1, keepdim=True)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L207 in forward, code:
+      variance = hidden_states.pow(2).mean(-1, keepdim=True)'
     marks:
       - fp32operation
       - constant
@@ -234,11 +303,14 @@ cases:
     inputs:
       - tensor:
           shape: [1, 14, 1]
+          stride: [14, 1, 1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
       - value: 1.0e-05
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:208 in forward, code: hidden_states = hidden_states * torch.rsqrt(variance
-      + self.variance_epsilon)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L208 in forward, code:
+      hidden_states = hidden_states * torch.rsqrt(variance + self.variance_epsilon)'
     marks:
       - fp32operation
       - constant
@@ -247,52 +319,74 @@ cases:
     inputs:
       - tensor:
           shape: [1, 14, 1]
+          stride: [14, 1, 1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:208 in forward, code: hidden_states = hidden_states * torch.rsqrt(variance
-      + self.variance_epsilon)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L208 in forward, code:
+      hidden_states = hidden_states * torch.rsqrt(variance + self.variance_epsilon)'
     marks: fp32operation
   - name: torch.mul.2
     op: torch.mul
     inputs:
       - tensor:
           shape: [1, 14, 5120]
+          stride: [71680, 5120, 1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
       - tensor:
           shape: [1, 14, 1]
+          stride: [14, 1, 1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:208 in forward, code: hidden_states = hidden_states * torch.rsqrt(variance
-      + self.variance_epsilon)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L208 in forward, code:
+      hidden_states = hidden_states * torch.rsqrt(variance + self.variance_epsilon)'
     marks: fp32operation
   - name: torch.mul.3
     op: torch.mul
     inputs:
       - tensor:
           shape: [5120]
+          stride: [1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - tensor:
           shape: [1, 14, 5120]
+          stride: [71680, 5120, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:209 in forward, code: return self.weight * hidden_states.to(input_dtype)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L209 in forward, code:
+      return self.weight * hidden_states.to(input_dtype)'
     marks: bf16operation
   - name: torch.nn.functional.linear.1
     op: torch.nn.functional.linear
     inputs:
       - tensor:
           shape: [1, 14, 5120]
+          stride: [71680, 5120, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - tensor:
           shape: [4096, 5120]
+          stride: [5120, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - value: null
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:140 in forward, code: query_states = self.q_proj(hidden_states).view(hidden_shape).transpose(1,
-      2)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L140 in forward, code:
+      query_states = self.q_proj(hidden_states).view(hidden_shape).transpose(1, 2)'
     marks:
       - bf16operation
       - constant
@@ -301,11 +395,14 @@ cases:
     inputs:
       - tensor:
           shape: [1, 14, 4096]
+          stride: [57344, 4096, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - value: (1, 14, -1, 128)
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:140 in forward, code: query_states = self.q_proj(hidden_states).view(hidden_shape).transpose(1,
-      2)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L140 in forward, code:
+      query_states = self.q_proj(hidden_states).view(hidden_shape).transpose(1, 2)'
     marks:
       - bf16operation
       - constant
@@ -314,12 +411,15 @@ cases:
     inputs:
       - tensor:
           shape: [1, 14, 32, 128]
+          stride: [57344, 4096, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - value: 1
       - value: 2
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:140 in forward, code: query_states = self.q_proj(hidden_states).view(hidden_shape).transpose(1,
-      2)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L140 in forward, code:
+      query_states = self.q_proj(hidden_states).view(hidden_shape).transpose(1, 2)'
     marks:
       - bf16operation
       - constant
@@ -328,15 +428,21 @@ cases:
     inputs:
       - tensor:
           shape: [1, 14, 5120]
+          stride: [71680, 5120, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - tensor:
           shape: [1024, 5120]
+          stride: [5120, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - value: null
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:141 in forward, code: key_states = self.k_proj(hidden_states).view(hidden_shape).transpose(1,
-      2)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L141 in forward, code:
+      key_states = self.k_proj(hidden_states).view(hidden_shape).transpose(1, 2)'
     marks:
       - bf16operation
       - constant
@@ -345,11 +451,14 @@ cases:
     inputs:
       - tensor:
           shape: [1, 14, 1024]
+          stride: [14336, 1024, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - value: (1, 14, -1, 128)
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:141 in forward, code: key_states = self.k_proj(hidden_states).view(hidden_shape).transpose(1,
-      2)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L141 in forward, code:
+      key_states = self.k_proj(hidden_states).view(hidden_shape).transpose(1, 2)'
     marks:
       - bf16operation
       - constant
@@ -358,12 +467,15 @@ cases:
     inputs:
       - tensor:
           shape: [1, 14, 8, 128]
+          stride: [14336, 1024, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - value: 1
       - value: 2
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:141 in forward, code: key_states = self.k_proj(hidden_states).view(hidden_shape).transpose(1,
-      2)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L141 in forward, code:
+      key_states = self.k_proj(hidden_states).view(hidden_shape).transpose(1, 2)'
     marks:
       - bf16operation
       - constant
@@ -372,10 +484,14 @@ cases:
     inputs:
       - tensor:
           shape: [1, 14, 128]
+          stride: [1792, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - value: 1
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:61 in apply_rotary_pos_emb, code: cos = cos.unsqueeze(unsqueeze_dim)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L61 in apply_rotary_pos_emb,
+      code: cos = cos.unsqueeze(unsqueeze_dim)'
     marks:
       - bf16operation
       - constant
@@ -384,24 +500,34 @@ cases:
     inputs:
       - tensor:
           shape: [1, 32, 14, 128]
+          stride: [57344, 128, 4096, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - tensor:
           shape: [1, 1, 14, 128]
+          stride: [1792, 1792, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:63 in apply_rotary_pos_emb, code: q_embed = (q * cos) + (rotate_half(q)
-      * sin)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L63 in apply_rotary_pos_emb,
+      code: q_embed = (q * cos) + (rotate_half(q) * sin)'
     marks: bf16operation
   - name: torch.getitem.3
     op: torch.getitem
     inputs:
       - tensor:
           shape: [1, 32, 14, 128]
+          stride: [57344, 128, 4096, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - py: (Ellipsis, slice(None, 64, None))
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:37 in rotate_half, code: x1 = x[..., : x.shape[-1] // 2]'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L37 in rotate_half,
+      code: x1 = x[..., : x.shape[-1] // 2]'
     marks:
       - bf16operation
       - constant
@@ -410,63 +536,110 @@ cases:
     inputs:
       - tensor:
           shape: [1, 32, 14, 64]
+          stride: [57344, 128, 4096, 1]
+          storage_offset: 64
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:39 in rotate_half, code: return torch.cat((-x2, x1), dim=-1)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L39 in rotate_half,
+      code: return torch.cat((-x2, x1), dim=-1)'
     marks: bf16operation
   - name: torch.cat.2
     op: torch.cat
     inputs:
       - tensor_list:
           - shape: [1, 32, 14, 64]
+            stride: [28672, 64, 2048, 1]
+            storage_offset: 0
             dtype: torch.bfloat16
+            device: cuda:0
             init: rand
           - shape: [1, 32, 14, 64]
+            stride: [57344, 128, 4096, 1]
+            storage_offset: 0
             dtype: torch.bfloat16
+            device: cuda:0
             init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:39 in rotate_half, code: return torch.cat((-x2, x1), dim=-1)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L39 in rotate_half,
+      code: return torch.cat((-x2, x1), dim=-1)'
     marks:
       - bf16operation
       - constant
     kwmap:
       dim: -1
+  - name: torch.mul.5
+    op: torch.mul
+    inputs:
+      - tensor:
+          shape: [1, 32, 14, 128]
+          stride: [57344, 1792, 128, 1]
+          storage_offset: 0
+          dtype: torch.bfloat16
+          device: cuda:0
+          init: rand
+      - tensor:
+          shape: [1, 1, 14, 128]
+          stride: [1792, 1792, 128, 1]
+          storage_offset: 0
+          dtype: torch.bfloat16
+          device: cuda:0
+          init: rand
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L63 in apply_rotary_pos_emb,
+      code: q_embed = (q * cos) + (rotate_half(q) * sin)'
+    marks: bf16operation
   - name: torch.add.2
     op: torch.add
     inputs:
       - tensor:
           shape: [1, 32, 14, 128]
+          stride: [57344, 128, 4096, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - tensor:
           shape: [1, 32, 14, 128]
+          stride: [57344, 1792, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:63 in apply_rotary_pos_emb, code: q_embed = (q * cos) + (rotate_half(q)
-      * sin)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L63 in apply_rotary_pos_emb,
+      code: q_embed = (q * cos) + (rotate_half(q) * sin)'
     marks: bf16operation
-  - name: torch.mul.5
+  - name: torch.mul.6
     op: torch.mul
     inputs:
       - tensor:
           shape: [1, 8, 14, 128]
+          stride: [14336, 128, 1024, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - tensor:
           shape: [1, 1, 14, 128]
+          stride: [1792, 1792, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:64 in apply_rotary_pos_emb, code: k_embed = (k * cos) + (rotate_half(k)
-      * sin)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L64 in apply_rotary_pos_emb,
+      code: k_embed = (k * cos) + (rotate_half(k) * sin)'
     marks: bf16operation
   - name: torch.getitem.4
     op: torch.getitem
     inputs:
       - tensor:
           shape: [1, 8, 14, 128]
+          stride: [14336, 128, 1024, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - py: (Ellipsis, slice(None, 64, None))
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:37 in rotate_half, code: x1 = x[..., : x.shape[-1] // 2]'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L37 in rotate_half,
+      code: x1 = x[..., : x.shape[-1] // 2]'
     marks:
       - bf16operation
       - constant
@@ -475,62 +648,105 @@ cases:
     inputs:
       - tensor:
           shape: [1, 8, 14, 64]
+          stride: [14336, 128, 1024, 1]
+          storage_offset: 64
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:39 in rotate_half, code: return torch.cat((-x2, x1), dim=-1)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L39 in rotate_half,
+      code: return torch.cat((-x2, x1), dim=-1)'
     marks: bf16operation
   - name: torch.cat.3
     op: torch.cat
     inputs:
       - tensor_list:
           - shape: [1, 8, 14, 64]
+            stride: [7168, 64, 512, 1]
+            storage_offset: 0
             dtype: torch.bfloat16
+            device: cuda:0
             init: rand
           - shape: [1, 8, 14, 64]
+            stride: [14336, 128, 1024, 1]
+            storage_offset: 0
             dtype: torch.bfloat16
+            device: cuda:0
             init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:39 in rotate_half, code: return torch.cat((-x2, x1), dim=-1)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L39 in rotate_half,
+      code: return torch.cat((-x2, x1), dim=-1)'
     marks:
       - bf16operation
       - constant
     kwmap:
       dim: -1
+  - name: torch.mul.7
+    op: torch.mul
+    inputs:
+      - tensor:
+          shape: [1, 8, 14, 128]
+          stride: [14336, 1792, 128, 1]
+          storage_offset: 0
+          dtype: torch.bfloat16
+          device: cuda:0
+          init: rand
+      - tensor:
+          shape: [1, 1, 14, 128]
+          stride: [1792, 1792, 128, 1]
+          storage_offset: 0
+          dtype: torch.bfloat16
+          device: cuda:0
+          init: rand
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L64 in apply_rotary_pos_emb,
+      code: k_embed = (k * cos) + (rotate_half(k) * sin)'
+    marks: bf16operation
   - name: torch.add.3
     op: torch.add
     inputs:
       - tensor:
           shape: [1, 8, 14, 128]
+          stride: [14336, 128, 1024, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - tensor:
           shape: [1, 8, 14, 128]
+          stride: [14336, 1792, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:64 in apply_rotary_pos_emb, code: k_embed = (k * cos) + (rotate_half(k)
-      * sin)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L64 in apply_rotary_pos_emb,
+      code: k_embed = (k * cos) + (rotate_half(k) * sin)'
     marks: bf16operation
   - name: torch.truediv.1
     op: torch.truediv
     inputs:
       - tensor:
           shape: [14]
+          stride: [1]
+          storage_offset: 0
           dtype: torch.int64
+          device: cuda:0
           init: randint
           init_args:
             high: 1000
       - value: 16384
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:106 in _get_llama_4_attn_scale, code: scaling = 1 + beta * torch.log(1
-      + torch.floor(positions_ids / max_position_embeddings))'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L106 in _get_llama_4_attn_scale,
+      code: scaling = 1 + beta * torch.log(1 + torch.floor(positions_ids / max_position_embeddings))'
     marks: constant
   - name: torch.floor.1
     op: torch.floor
     inputs:
       - tensor:
           shape: [14]
+          stride: [1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:106 in _get_llama_4_attn_scale, code: scaling = 1 + beta * torch.log(1
-      + torch.floor(positions_ids / max_position_embeddings))'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L106 in _get_llama_4_attn_scale,
+      code: scaling = 1 + beta * torch.log(1 + torch.floor(positions_ids / max_position_embeddings))'
     marks: fp32operation
   - name: torch.add.4
     op: torch.add
@@ -538,10 +754,13 @@ cases:
       - value: 1
       - tensor:
           shape: [14]
+          stride: [1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:106 in _get_llama_4_attn_scale, code: scaling = 1 + beta * torch.log(1
-      + torch.floor(positions_ids / max_position_embeddings))'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L106 in _get_llama_4_attn_scale,
+      code: scaling = 1 + beta * torch.log(1 + torch.floor(positions_ids / max_position_embeddings))'
     marks:
       - fp32operation
       - constant
@@ -550,21 +769,27 @@ cases:
     inputs:
       - tensor:
           shape: [14]
+          stride: [1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:106 in _get_llama_4_attn_scale, code: scaling = 1 + beta * torch.log(1
-      + torch.floor(positions_ids / max_position_embeddings))'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L106 in _get_llama_4_attn_scale,
+      code: scaling = 1 + beta * torch.log(1 + torch.floor(positions_ids / max_position_embeddings))'
     marks: fp32operation
-  - name: torch.mul.6
+  - name: torch.mul.8
     op: torch.mul
     inputs:
       - value: 0.1
       - tensor:
           shape: [14]
+          stride: [1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:106 in _get_llama_4_attn_scale, code: scaling = 1 + beta * torch.log(1
-      + torch.floor(positions_ids / max_position_embeddings))'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L106 in _get_llama_4_attn_scale,
+      code: scaling = 1 + beta * torch.log(1 + torch.floor(positions_ids / max_position_embeddings))'
     marks:
       - fp32operation
       - constant
@@ -573,54 +798,76 @@ cases:
     inputs:
       - tensor:
           shape: [14]
+          stride: [1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
       - value: -1
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:107 in _get_llama_4_attn_scale, code: return scaling.unsqueeze(-1)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L107 in _get_llama_4_attn_scale,
+      code: return scaling.unsqueeze(-1)'
     marks:
       - fp32operation
       - constant
-  - name: torch.mul.7
+  - name: torch.mul.9
     op: torch.mul
     inputs:
       - tensor:
           shape: [1, 32, 14, 128]
+          stride: [57344, 128, 4096, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - tensor:
           shape: [14, 1]
+          stride: [1, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:146 in forward, code: query_states = query_states * _get_llama_4_attn_scale('
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L146 in forward, code:
+      query_states = query_states * _get_llama_4_attn_scale('
     marks: bf16operation
   - name: torch.zeros.1
     op: torch.zeros
     inputs:
       - value: (1, 8, 2048, 128)
-    description: 'site-packages/transformers/cache_utils.py:290 in lazy_initialization, code: self.keys = torch.zeros('
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/cache_utils.py#L290 in lazy_initialization, code: self.keys =
+      torch.zeros('
     marks: constant
     kwmap:
-      dtype: torch.float16
+      dtype: torch.bfloat16
       device: cuda:0
   - name: torch.index_copy_.1
     op: torch.index_copy_
     inputs:
       - tensor:
           shape: [1, 8, 2048, 128]
+          stride: [2097152, 262144, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - value: 2
       - tensor:
           shape: [14]
+          stride: [1]
+          storage_offset: 0
           dtype: torch.int64
+          device: cuda:0
           init: randint
           init_args:
             high: 2048
       - tensor:
           shape: [1, 8, 14, 128]
+          stride: [14336, 128, 1024, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/cache_utils.py:340 in update, code: self.keys.index_copy_(2, cache_position, key_states)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/cache_utils.py#L340 in update, code: self.keys.index_copy_(2,
+      cache_position, key_states)'
     marks:
       - bf16operation
       - constant
@@ -629,11 +876,14 @@ cases:
     inputs:
       - tensor:
           shape: [1, 8, 2048, 128]
+          stride: [2097152, 262144, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - py: (slice(None, None, None), slice(None, None, None), None, slice(None, None, None), slice(None, None, None))
-    description: 'site-packages/transformers/integrations/sdpa_attention.py:24 in repeat_kv, code: hidden_states = hidden_states[:, :, None, :, :].expand(batch,
-      num_key_value_heads, n_rep, slen, head_dim)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/integrations/sdpa_attention.py#L24 in repeat_kv, code: hidden_states
+      = hidden_states[:, :, None, :, :].expand(batch, num_key_value_heads, n_rep, slen, head_dim)'
     marks:
       - bf16operation
       - constant
@@ -642,15 +892,18 @@ cases:
     inputs:
       - tensor:
           shape: [1, 8, 1, 2048, 128]
+          stride: [2097152, 262144, 262144, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - value: 1
       - value: 8
       - value: 4
       - value: 2048
       - value: 128
-    description: 'site-packages/transformers/integrations/sdpa_attention.py:24 in repeat_kv, code: hidden_states = hidden_states[:, :, None, :, :].expand(batch,
-      num_key_value_heads, n_rep, slen, head_dim)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/integrations/sdpa_attention.py#L24 in repeat_kv, code: hidden_states
+      = hidden_states[:, :, None, :, :].expand(batch, num_key_value_heads, n_rep, slen, head_dim)'
     marks:
       - bf16operation
       - constant
@@ -659,11 +912,14 @@ cases:
     inputs:
       - tensor:
           shape: [1, 8, 4, 2048, 128]
+          stride: [2097152, 262144, 0, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - value: (1, 32, 2048, 128)
-    description: 'site-packages/transformers/integrations/sdpa_attention.py:25 in repeat_kv, code: return hidden_states.reshape(batch, num_key_value_heads
-      * n_rep, slen, head_dim)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/integrations/sdpa_attention.py#L25 in repeat_kv, code: return
+      hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)'
     marks:
       - bf16operation
       - constant
@@ -672,17 +928,27 @@ cases:
     inputs:
       - tensor:
           shape: [1, 32, 14, 128]
+          stride: [57344, 128, 4096, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - tensor:
           shape: [1, 32, 2048, 128]
+          stride: [8388608, 262144, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - tensor:
           shape: [1, 32, 2048, 128]
+          stride: [8388608, 262144, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/integrations/sdpa_attention.py:92 in sdpa_attention_forward, code: attn_output = torch.nn.functional.scaled_dot_product_attention('
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/integrations/sdpa_attention.py#L92 in sdpa_attention_forward,
+      code: attn_output = torch.nn.functional.scaled_dot_product_attention('
     marks: bf16operation
     kwmap:
       dropout_p: 0.0
@@ -693,12 +959,15 @@ cases:
     inputs:
       - tensor:
           shape: [1, 32, 14, 128]
+          stride: [57344, 1792, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - value: 1
       - value: 2
-    description: 'site-packages/transformers/integrations/sdpa_attention.py:102 in sdpa_attention_forward, code: attn_output = attn_output.transpose(1,
-      2).contiguous()'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/integrations/sdpa_attention.py#L102 in sdpa_attention_forward,
+      code: attn_output = attn_output.transpose(1, 2).contiguous()'
     marks:
       - bf16operation
       - constant
@@ -707,21 +976,27 @@ cases:
     inputs:
       - tensor:
           shape: [1, 14, 32, 128]
+          stride: [57344, 128, 1792, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/integrations/sdpa_attention.py:102 in sdpa_attention_forward, code: attn_output = attn_output.transpose(1,
-      2).contiguous()'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/integrations/sdpa_attention.py#L102 in sdpa_attention_forward,
+      code: attn_output = attn_output.transpose(1, 2).contiguous()'
     marks: bf16operation
   - name: torch.reshape.2
     op: torch.reshape
     inputs:
       - tensor:
           shape: [1, 14, 32, 128]
+          stride: [57344, 4096, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - value: (1, 14, -1)
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:173 in forward, code: attn_output = attn_output.reshape(*input_shape,
-      -1).contiguous()'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L173 in forward, code:
+      attn_output = attn_output.reshape(*input_shape, -1).contiguous()'
     marks:
       - bf16operation
       - constant
@@ -730,24 +1005,34 @@ cases:
     inputs:
       - tensor:
           shape: [1, 14, 4096]
+          stride: [57344, 4096, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:173 in forward, code: attn_output = attn_output.reshape(*input_shape,
-      -1).contiguous()'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L173 in forward, code:
+      attn_output = attn_output.reshape(*input_shape, -1).contiguous()'
     marks: bf16operation
   - name: torch.nn.functional.linear.3
     op: torch.nn.functional.linear
     inputs:
       - tensor:
           shape: [1, 14, 4096]
+          stride: [57344, 4096, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - tensor:
           shape: [5120, 4096]
+          stride: [4096, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - value: null
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:174 in forward, code: attn_output = self.o_proj(attn_output)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L174 in forward, code:
+      attn_output = self.o_proj(attn_output)'
     marks:
       - bf16operation
       - constant
@@ -756,28 +1041,41 @@ cases:
     inputs:
       - tensor:
           shape: [1, 14, 5120]
+          stride: [71680, 5120, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - tensor:
           shape: [1, 14, 5120]
+          stride: [71680, 5120, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:248 in forward, code: hidden_states = residual + hidden_states'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L248 in forward, code:
+      hidden_states = residual + hidden_states'
     marks: bf16operation
   - name: torch.nn.functional.linear.4
     op: torch.nn.functional.linear
     inputs:
       - tensor:
           shape: [1, 14, 5120]
+          stride: [71680, 5120, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - tensor:
           shape: [16384, 5120]
+          stride: [5120, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - value: null
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:190 in forward, code: down_proj = self.down_proj(self.act_fn(self.gate_proj(x))
-      * self.up_proj(x))'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L190 in forward, code:
+      down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))'
     marks:
       - bf16operation
       - constant
@@ -786,38 +1084,53 @@ cases:
     inputs:
       - tensor:
           shape: [1, 14, 16384]
+          stride: [229376, 16384, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/activations.py:103 in forward, code: return nn.functional.silu(input)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/activations.py#L103 in forward, code: return nn.functional.silu(input)'
     marks: bf16operation
-  - name: torch.mul.8
+  - name: torch.mul.10
     op: torch.mul
     inputs:
       - tensor:
           shape: [1, 14, 16384]
+          stride: [229376, 16384, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - tensor:
           shape: [1, 14, 16384]
+          stride: [229376, 16384, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:190 in forward, code: down_proj = self.down_proj(self.act_fn(self.gate_proj(x))
-      * self.up_proj(x))'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L190 in forward, code:
+      down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))'
     marks: bf16operation
   - name: torch.nn.functional.linear.5
     op: torch.nn.functional.linear
     inputs:
       - tensor:
           shape: [1, 14, 16384]
+          stride: [229376, 16384, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - tensor:
           shape: [5120, 16384]
+          stride: [16384, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - value: null
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:190 in forward, code: down_proj = self.down_proj(self.act_fn(self.gate_proj(x))
-      * self.up_proj(x))'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L190 in forward, code:
+      down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))'
     marks:
       - bf16operation
       - constant
@@ -826,11 +1139,14 @@ cases:
     inputs:
       - tensor:
           shape: [1, 14, 5120]
+          stride: [71680, 5120, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - py: (slice(None, None, None), slice(-1, None, None), slice(None, None, None))
-    description: 'site-packages/transformers/models/mistral3/modeling_mistral3.py:466 in forward, code: logits = self.lm_head(hidden_states[:, slice_indices,
-      :])'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/mistral3/modeling_mistral3.py#L466 in forward, code: logits
+      = self.lm_head(hidden_states[:, slice_indices, :])'
     marks:
       - bf16operation
       - constant
@@ -839,15 +1155,21 @@ cases:
     inputs:
       - tensor:
           shape: [1, 1, 5120]
+          stride: [71680, 5120, 1]
+          storage_offset: 66560
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - tensor:
           shape: [131072, 5120]
+          stride: [5120, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - value: null
-    description: 'site-packages/transformers/models/mistral3/modeling_mistral3.py:466 in forward, code: logits = self.lm_head(hidden_states[:, slice_indices,
-      :])'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/mistral3/modeling_mistral3.py#L466 in forward, code: logits
+      = self.lm_head(hidden_states[:, slice_indices, :])'
     marks:
       - bf16operation
       - constant
@@ -856,20 +1178,27 @@ cases:
     inputs:
       - tensor:
           shape: [1, 1]
+          stride: [1, 1]
+          storage_offset: 0
           dtype: torch.int64
+          device: cuda:0
           init: randint
           init_args:
             high: 1000
       - tensor:
           shape: [131072, 5120]
+          stride: [5120, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - value: 11
       - value: null
       - value: 2.0
       - value: false
       - value: false
-    description: 'site-packages/transformers/models/mistral3/modeling_mistral3.py:311 in forward, code: inputs_embeds = self.get_input_embeddings()(input_ids)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/mistral3/modeling_mistral3.py#L311 in forward, code: inputs_embeds
+      = self.get_input_embeddings()(input_ids)'
     marks:
       - bf16operation
       - constant
@@ -878,60 +1207,78 @@ cases:
     inputs:
       - tensor:
           shape: [1, 1]
+          stride: [1, 1]
+          storage_offset: 0
           dtype: torch.int64
+          device: cuda:0
           init: randint
           init_args:
             high: 1000
       - py: (slice(None, None, None), None, slice(None, None, None))
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:330 in forward, code: position_ids_expanded = position_ids[:, None,
-      :].float()'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L330 in forward, code:
+      position_ids_expanded = position_ids[:, None, :].float()'
     marks: constant
   - name: torch.float.4
     op: torch.float
     inputs:
       - tensor:
           shape: [1, 1, 1]
+          stride: [1, 1, 1]
+          storage_offset: 0
           dtype: torch.int64
+          device: cuda:0
           init: randint
           init_args:
             high: 1000
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:330 in forward, code: position_ids_expanded = position_ids[:, None,
-      :].float()'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L330 in forward, code:
+      position_ids_expanded = position_ids[:, None, :].float()'
   - name: torch.float.5
     op: torch.float
     inputs:
       - tensor:
           shape: [1, 1, 1]
+          stride: [1, 1, 1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:334 in forward, code: freqs = (inv_freq_expanded.float() @ position_ids_expanded.float()).transpose(1,
-      2)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L334 in forward, code:
+      freqs = (inv_freq_expanded.float() @ position_ids_expanded.float()).transpose(1, 2)'
     marks: fp32operation
   - name: torch.matmul.2
     op: torch.matmul
     inputs:
       - tensor:
           shape: [1, 64, 1]
+          stride: [64, 1, 1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
       - tensor:
           shape: [1, 1, 1]
+          stride: [1, 1, 1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:334 in forward, code: freqs = (inv_freq_expanded.float() @ position_ids_expanded.float()).transpose(1,
-      2)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L334 in forward, code:
+      freqs = (inv_freq_expanded.float() @ position_ids_expanded.float()).transpose(1, 2)'
     marks: fp32operation
   - name: torch.transpose.5
     op: torch.transpose
     inputs:
       - tensor:
           shape: [1, 64, 1]
+          stride: [64, 1, 1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
       - value: 1
       - value: 2
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:334 in forward, code: freqs = (inv_freq_expanded.float() @ position_ids_expanded.float()).transpose(1,
-      2)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L334 in forward, code:
+      freqs = (inv_freq_expanded.float() @ position_ids_expanded.float()).transpose(1, 2)'
     marks:
       - fp32operation
       - constant
@@ -940,12 +1287,19 @@ cases:
     inputs:
       - tensor_list:
           - shape: [1, 1, 64]
+            stride: [64, 1, 1]
+            storage_offset: 0
             dtype: torch.float32
+            device: cuda:0
             init: rand
           - shape: [1, 1, 64]
+            stride: [64, 1, 1]
+            storage_offset: 0
             dtype: torch.float32
+            device: cuda:0
             init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:335 in forward, code: emb = torch.cat((freqs, freqs), dim=-1)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L335 in forward, code:
+      emb = torch.cat((freqs, freqs), dim=-1)'
     marks:
       - fp32operation
       - constant
@@ -956,19 +1310,27 @@ cases:
     inputs:
       - tensor:
           shape: [1, 1, 128]
+          stride: [128, 128, 1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:336 in forward, code: cos = emb.cos() * self.attention_scaling'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L336 in forward, code:
+      cos = emb.cos() * self.attention_scaling'
     marks: fp32operation
-  - name: torch.mul.9
+  - name: torch.mul.11
     op: torch.mul
     inputs:
       - tensor:
           shape: [1, 1, 128]
+          stride: [128, 128, 1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
       - value: 1.0
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:336 in forward, code: cos = emb.cos() * self.attention_scaling'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L336 in forward, code:
+      cos = emb.cos() * self.attention_scaling'
     marks:
       - fp32operation
       - constant
@@ -977,30 +1339,42 @@ cases:
     inputs:
       - tensor:
           shape: [1, 1, 128]
+          stride: [128, 128, 1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:337 in forward, code: sin = emb.sin() * self.attention_scaling'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L337 in forward, code:
+      sin = emb.sin() * self.attention_scaling'
     marks: fp32operation
   - name: torch.to.6
     op: torch.to
     inputs:
       - tensor:
           shape: [1, 1, 128]
+          stride: [128, 128, 1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:339 in forward, code: return cos.to(dtype=x.dtype), sin.to(dtype=x.dtype)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L339 in forward, code:
+      return cos.to(dtype=x.dtype), sin.to(dtype=x.dtype)'
     marks: fp32operation
     kwmap:
-      dtype: torch.float16
+      dtype: torch.bfloat16
   - name: torch.pow.2
     op: torch.pow
     inputs:
       - tensor:
           shape: [1, 1, 5120]
+          stride: [5120, 5120, 1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
       - value: 2
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:207 in forward, code: variance = hidden_states.pow(2).mean(-1, keepdim=True)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L207 in forward, code:
+      variance = hidden_states.pow(2).mean(-1, keepdim=True)'
     marks:
       - fp32operation
       - constant
@@ -1009,10 +1383,14 @@ cases:
     inputs:
       - tensor:
           shape: [1, 1, 5120]
+          stride: [5120, 5120, 1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
       - value: -1
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:207 in forward, code: variance = hidden_states.pow(2).mean(-1, keepdim=True)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L207 in forward, code:
+      variance = hidden_states.pow(2).mean(-1, keepdim=True)'
     marks:
       - fp32operation
       - constant
@@ -1023,11 +1401,14 @@ cases:
     inputs:
       - tensor:
           shape: [1, 1, 1]
+          stride: [1, 1, 1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
       - value: 1.0e-05
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:208 in forward, code: hidden_states = hidden_states * torch.rsqrt(variance
-      + self.variance_epsilon)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L208 in forward, code:
+      hidden_states = hidden_states * torch.rsqrt(variance + self.variance_epsilon)'
     marks:
       - fp32operation
       - constant
@@ -1036,52 +1417,74 @@ cases:
     inputs:
       - tensor:
           shape: [1, 1, 1]
+          stride: [1, 1, 1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:208 in forward, code: hidden_states = hidden_states * torch.rsqrt(variance
-      + self.variance_epsilon)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L208 in forward, code:
+      hidden_states = hidden_states * torch.rsqrt(variance + self.variance_epsilon)'
     marks: fp32operation
-  - name: torch.mul.10
+  - name: torch.mul.12
     op: torch.mul
     inputs:
       - tensor:
           shape: [1, 1, 5120]
+          stride: [5120, 5120, 1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
       - tensor:
           shape: [1, 1, 1]
+          stride: [1, 1, 1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:208 in forward, code: hidden_states = hidden_states * torch.rsqrt(variance
-      + self.variance_epsilon)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L208 in forward, code:
+      hidden_states = hidden_states * torch.rsqrt(variance + self.variance_epsilon)'
     marks: fp32operation
-  - name: torch.mul.11
+  - name: torch.mul.13
     op: torch.mul
     inputs:
       - tensor:
           shape: [5120]
+          stride: [1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - tensor:
           shape: [1, 1, 5120]
+          stride: [5120, 5120, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:209 in forward, code: return self.weight * hidden_states.to(input_dtype)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L209 in forward, code:
+      return self.weight * hidden_states.to(input_dtype)'
     marks: bf16operation
   - name: torch.nn.functional.linear.7
     op: torch.nn.functional.linear
     inputs:
       - tensor:
           shape: [1, 1, 5120]
+          stride: [5120, 5120, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - tensor:
           shape: [4096, 5120]
+          stride: [5120, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - value: null
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:140 in forward, code: query_states = self.q_proj(hidden_states).view(hidden_shape).transpose(1,
-      2)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L140 in forward, code:
+      query_states = self.q_proj(hidden_states).view(hidden_shape).transpose(1, 2)'
     marks:
       - bf16operation
       - constant
@@ -1090,11 +1493,14 @@ cases:
     inputs:
       - tensor:
           shape: [1, 1, 4096]
+          stride: [4096, 4096, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - value: (1, 1, -1, 128)
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:140 in forward, code: query_states = self.q_proj(hidden_states).view(hidden_shape).transpose(1,
-      2)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L140 in forward, code:
+      query_states = self.q_proj(hidden_states).view(hidden_shape).transpose(1, 2)'
     marks:
       - bf16operation
       - constant
@@ -1103,12 +1509,15 @@ cases:
     inputs:
       - tensor:
           shape: [1, 1, 32, 128]
+          stride: [4096, 4096, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - value: 1
       - value: 2
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:140 in forward, code: query_states = self.q_proj(hidden_states).view(hidden_shape).transpose(1,
-      2)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L140 in forward, code:
+      query_states = self.q_proj(hidden_states).view(hidden_shape).transpose(1, 2)'
     marks:
       - bf16operation
       - constant
@@ -1117,15 +1526,21 @@ cases:
     inputs:
       - tensor:
           shape: [1, 1, 5120]
+          stride: [5120, 5120, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - tensor:
           shape: [1024, 5120]
+          stride: [5120, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - value: null
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:141 in forward, code: key_states = self.k_proj(hidden_states).view(hidden_shape).transpose(1,
-      2)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L141 in forward, code:
+      key_states = self.k_proj(hidden_states).view(hidden_shape).transpose(1, 2)'
     marks:
       - bf16operation
       - constant
@@ -1134,11 +1549,14 @@ cases:
     inputs:
       - tensor:
           shape: [1, 1, 1024]
+          stride: [1024, 1024, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - value: (1, 1, -1, 128)
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:141 in forward, code: key_states = self.k_proj(hidden_states).view(hidden_shape).transpose(1,
-      2)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L141 in forward, code:
+      key_states = self.k_proj(hidden_states).view(hidden_shape).transpose(1, 2)'
     marks:
       - bf16operation
       - constant
@@ -1147,12 +1565,15 @@ cases:
     inputs:
       - tensor:
           shape: [1, 1, 8, 128]
+          stride: [1024, 1024, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - value: 1
       - value: 2
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:141 in forward, code: key_states = self.k_proj(hidden_states).view(hidden_shape).transpose(1,
-      2)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L141 in forward, code:
+      key_states = self.k_proj(hidden_states).view(hidden_shape).transpose(1, 2)'
     marks:
       - bf16operation
       - constant
@@ -1161,36 +1582,50 @@ cases:
     inputs:
       - tensor:
           shape: [1, 1, 128]
+          stride: [128, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - value: 1
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:61 in apply_rotary_pos_emb, code: cos = cos.unsqueeze(unsqueeze_dim)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L61 in apply_rotary_pos_emb,
+      code: cos = cos.unsqueeze(unsqueeze_dim)'
     marks:
       - bf16operation
       - constant
-  - name: torch.mul.12
+  - name: torch.mul.14
     op: torch.mul
     inputs:
       - tensor:
           shape: [1, 32, 1, 128]
+          stride: [4096, 128, 4096, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - tensor:
           shape: [1, 1, 1, 128]
+          stride: [128, 128, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:63 in apply_rotary_pos_emb, code: q_embed = (q * cos) + (rotate_half(q)
-      * sin)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L63 in apply_rotary_pos_emb,
+      code: q_embed = (q * cos) + (rotate_half(q) * sin)'
     marks: bf16operation
   - name: torch.getitem.8
     op: torch.getitem
     inputs:
       - tensor:
           shape: [1, 32, 1, 128]
+          stride: [4096, 128, 4096, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - py: (Ellipsis, slice(None, 64, None))
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:37 in rotate_half, code: x1 = x[..., : x.shape[-1] // 2]'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L37 in rotate_half,
+      code: x1 = x[..., : x.shape[-1] // 2]'
     marks:
       - bf16operation
       - constant
@@ -1199,63 +1634,110 @@ cases:
     inputs:
       - tensor:
           shape: [1, 32, 1, 64]
+          stride: [4096, 128, 4096, 1]
+          storage_offset: 64
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:39 in rotate_half, code: return torch.cat((-x2, x1), dim=-1)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L39 in rotate_half,
+      code: return torch.cat((-x2, x1), dim=-1)'
     marks: bf16operation
   - name: torch.cat.5
     op: torch.cat
     inputs:
       - tensor_list:
           - shape: [1, 32, 1, 64]
+            stride: [2048, 64, 64, 1]
+            storage_offset: 0
             dtype: torch.bfloat16
+            device: cuda:0
             init: rand
           - shape: [1, 32, 1, 64]
+            stride: [4096, 128, 4096, 1]
+            storage_offset: 0
             dtype: torch.bfloat16
+            device: cuda:0
             init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:39 in rotate_half, code: return torch.cat((-x2, x1), dim=-1)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L39 in rotate_half,
+      code: return torch.cat((-x2, x1), dim=-1)'
     marks:
       - bf16operation
       - constant
     kwmap:
       dim: -1
+  - name: torch.mul.15
+    op: torch.mul
+    inputs:
+      - tensor:
+          shape: [1, 32, 1, 128]
+          stride: [4096, 128, 128, 1]
+          storage_offset: 0
+          dtype: torch.bfloat16
+          device: cuda:0
+          init: rand
+      - tensor:
+          shape: [1, 1, 1, 128]
+          stride: [128, 128, 128, 1]
+          storage_offset: 0
+          dtype: torch.bfloat16
+          device: cuda:0
+          init: rand
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L63 in apply_rotary_pos_emb,
+      code: q_embed = (q * cos) + (rotate_half(q) * sin)'
+    marks: bf16operation
   - name: torch.add.7
     op: torch.add
     inputs:
       - tensor:
           shape: [1, 32, 1, 128]
+          stride: [4096, 128, 4096, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - tensor:
           shape: [1, 32, 1, 128]
+          stride: [4096, 128, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:63 in apply_rotary_pos_emb, code: q_embed = (q * cos) + (rotate_half(q)
-      * sin)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L63 in apply_rotary_pos_emb,
+      code: q_embed = (q * cos) + (rotate_half(q) * sin)'
     marks: bf16operation
-  - name: torch.mul.13
+  - name: torch.mul.16
     op: torch.mul
     inputs:
       - tensor:
           shape: [1, 8, 1, 128]
+          stride: [1024, 128, 1024, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - tensor:
           shape: [1, 1, 1, 128]
+          stride: [128, 128, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:64 in apply_rotary_pos_emb, code: k_embed = (k * cos) + (rotate_half(k)
-      * sin)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L64 in apply_rotary_pos_emb,
+      code: k_embed = (k * cos) + (rotate_half(k) * sin)'
     marks: bf16operation
   - name: torch.getitem.9
     op: torch.getitem
     inputs:
       - tensor:
           shape: [1, 8, 1, 128]
+          stride: [1024, 128, 1024, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - py: (Ellipsis, slice(None, 64, None))
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:37 in rotate_half, code: x1 = x[..., : x.shape[-1] // 2]'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L37 in rotate_half,
+      code: x1 = x[..., : x.shape[-1] // 2]'
     marks:
       - bf16operation
       - constant
@@ -1264,62 +1746,105 @@ cases:
     inputs:
       - tensor:
           shape: [1, 8, 1, 64]
+          stride: [1024, 128, 1024, 1]
+          storage_offset: 64
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:39 in rotate_half, code: return torch.cat((-x2, x1), dim=-1)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L39 in rotate_half,
+      code: return torch.cat((-x2, x1), dim=-1)'
     marks: bf16operation
   - name: torch.cat.6
     op: torch.cat
     inputs:
       - tensor_list:
           - shape: [1, 8, 1, 64]
+            stride: [512, 64, 64, 1]
+            storage_offset: 0
             dtype: torch.bfloat16
+            device: cuda:0
             init: rand
           - shape: [1, 8, 1, 64]
+            stride: [1024, 128, 1024, 1]
+            storage_offset: 0
             dtype: torch.bfloat16
+            device: cuda:0
             init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:39 in rotate_half, code: return torch.cat((-x2, x1), dim=-1)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L39 in rotate_half,
+      code: return torch.cat((-x2, x1), dim=-1)'
     marks:
       - bf16operation
       - constant
     kwmap:
       dim: -1
+  - name: torch.mul.17
+    op: torch.mul
+    inputs:
+      - tensor:
+          shape: [1, 8, 1, 128]
+          stride: [1024, 128, 128, 1]
+          storage_offset: 0
+          dtype: torch.bfloat16
+          device: cuda:0
+          init: rand
+      - tensor:
+          shape: [1, 1, 1, 128]
+          stride: [128, 128, 128, 1]
+          storage_offset: 0
+          dtype: torch.bfloat16
+          device: cuda:0
+          init: rand
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L64 in apply_rotary_pos_emb,
+      code: k_embed = (k * cos) + (rotate_half(k) * sin)'
+    marks: bf16operation
   - name: torch.add.8
     op: torch.add
     inputs:
       - tensor:
           shape: [1, 8, 1, 128]
+          stride: [1024, 128, 1024, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - tensor:
           shape: [1, 8, 1, 128]
+          stride: [1024, 128, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:64 in apply_rotary_pos_emb, code: k_embed = (k * cos) + (rotate_half(k)
-      * sin)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L64 in apply_rotary_pos_emb,
+      code: k_embed = (k * cos) + (rotate_half(k) * sin)'
     marks: bf16operation
   - name: torch.truediv.2
     op: torch.truediv
     inputs:
       - tensor:
           shape: [1]
+          stride: [1]
+          storage_offset: 0
           dtype: torch.int64
+          device: cuda:0
           init: randint
           init_args:
             high: 1000
       - value: 16384
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:106 in _get_llama_4_attn_scale, code: scaling = 1 + beta * torch.log(1
-      + torch.floor(positions_ids / max_position_embeddings))'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L106 in _get_llama_4_attn_scale,
+      code: scaling = 1 + beta * torch.log(1 + torch.floor(positions_ids / max_position_embeddings))'
     marks: constant
   - name: torch.floor.2
     op: torch.floor
     inputs:
       - tensor:
           shape: [1]
+          stride: [1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:106 in _get_llama_4_attn_scale, code: scaling = 1 + beta * torch.log(1
-      + torch.floor(positions_ids / max_position_embeddings))'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L106 in _get_llama_4_attn_scale,
+      code: scaling = 1 + beta * torch.log(1 + torch.floor(positions_ids / max_position_embeddings))'
     marks: fp32operation
   - name: torch.add.9
     op: torch.add
@@ -1327,10 +1852,13 @@ cases:
       - value: 1
       - tensor:
           shape: [1]
+          stride: [1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:106 in _get_llama_4_attn_scale, code: scaling = 1 + beta * torch.log(1
-      + torch.floor(positions_ids / max_position_embeddings))'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L106 in _get_llama_4_attn_scale,
+      code: scaling = 1 + beta * torch.log(1 + torch.floor(positions_ids / max_position_embeddings))'
     marks:
       - fp32operation
       - constant
@@ -1339,21 +1867,27 @@ cases:
     inputs:
       - tensor:
           shape: [1]
+          stride: [1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:106 in _get_llama_4_attn_scale, code: scaling = 1 + beta * torch.log(1
-      + torch.floor(positions_ids / max_position_embeddings))'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L106 in _get_llama_4_attn_scale,
+      code: scaling = 1 + beta * torch.log(1 + torch.floor(positions_ids / max_position_embeddings))'
     marks: fp32operation
-  - name: torch.mul.14
+  - name: torch.mul.18
     op: torch.mul
     inputs:
       - value: 0.1
       - tensor:
           shape: [1]
+          stride: [1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:106 in _get_llama_4_attn_scale, code: scaling = 1 + beta * torch.log(1
-      + torch.floor(positions_ids / max_position_embeddings))'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L106 in _get_llama_4_attn_scale,
+      code: scaling = 1 + beta * torch.log(1 + torch.floor(positions_ids / max_position_embeddings))'
     marks:
       - fp32operation
       - constant
@@ -1362,45 +1896,98 @@ cases:
     inputs:
       - tensor:
           shape: [1]
+          stride: [1]
+          storage_offset: 0
           dtype: torch.float32
+          device: cuda:0
           init: rand
       - value: -1
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:107 in _get_llama_4_attn_scale, code: return scaling.unsqueeze(-1)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L107 in _get_llama_4_attn_scale,
+      code: return scaling.unsqueeze(-1)'
     marks:
       - fp32operation
       - constant
-  - name: torch.mul.15
+  - name: torch.mul.19
     op: torch.mul
     inputs:
       - tensor:
           shape: [1, 32, 1, 128]
+          stride: [4096, 128, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - tensor:
           shape: [1, 1]
+          stride: [1, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:146 in forward, code: query_states = query_states * _get_llama_4_attn_scale('
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L146 in forward, code:
+      query_states = query_states * _get_llama_4_attn_scale('
     marks: bf16operation
   - name: torch.index_copy_.2
     op: torch.index_copy_
     inputs:
       - tensor:
           shape: [1, 8, 2048, 128]
+          stride: [2097152, 262144, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - value: 2
       - tensor:
           shape: [1]
+          stride: [1]
+          storage_offset: 0
           dtype: torch.int64
+          device: cuda:0
           init: randint
           init_args:
             high: 2048
       - tensor:
           shape: [1, 8, 1, 128]
+          stride: [1024, 128, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/cache_utils.py:340 in update, code: self.keys.index_copy_(2, cache_position, key_states)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/cache_utils.py#L340 in update, code: self.keys.index_copy_(2,
+      cache_position, key_states)'
+    marks:
+      - bf16operation
+      - constant
+  - name: torch.index_copy_.3
+    op: torch.index_copy_
+    inputs:
+      - tensor:
+          shape: [1, 8, 2048, 128]
+          stride: [2097152, 262144, 128, 1]
+          storage_offset: 0
+          dtype: torch.bfloat16
+          device: cuda:0
+          init: rand
+      - value: 2
+      - tensor:
+          shape: [1]
+          stride: [1]
+          storage_offset: 0
+          dtype: torch.int64
+          device: cuda:0
+          init: randint
+          init_args:
+            high: 2048
+      - tensor:
+          shape: [1, 8, 1, 128]
+          stride: [1024, 128, 1024, 1]
+          storage_offset: 0
+          dtype: torch.bfloat16
+          device: cuda:0
+          init: rand
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/cache_utils.py#L341 in update, code: self.values.index_copy_(2,
+      cache_position, value_states)'
     marks:
       - bf16operation
       - constant
@@ -1409,17 +1996,27 @@ cases:
     inputs:
       - tensor:
           shape: [1, 32, 1, 128]
+          stride: [4096, 128, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - tensor:
           shape: [1, 32, 2048, 128]
+          stride: [8388608, 262144, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - tensor:
           shape: [1, 32, 2048, 128]
+          stride: [8388608, 262144, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/integrations/sdpa_attention.py:92 in sdpa_attention_forward, code: attn_output = torch.nn.functional.scaled_dot_product_attention('
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/integrations/sdpa_attention.py#L92 in sdpa_attention_forward,
+      code: attn_output = torch.nn.functional.scaled_dot_product_attention('
     marks: bf16operation
     kwmap:
       dropout_p: 0.0
@@ -1430,12 +2027,15 @@ cases:
     inputs:
       - tensor:
           shape: [1, 32, 1, 128]
+          stride: [4096, 128, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - value: 1
       - value: 2
-    description: 'site-packages/transformers/integrations/sdpa_attention.py:102 in sdpa_attention_forward, code: attn_output = attn_output.transpose(1,
-      2).contiguous()'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/integrations/sdpa_attention.py#L102 in sdpa_attention_forward,
+      code: attn_output = attn_output.transpose(1, 2).contiguous()'
     marks:
       - bf16operation
       - constant
@@ -1444,21 +2044,27 @@ cases:
     inputs:
       - tensor:
           shape: [1, 1, 32, 128]
+          stride: [4096, 128, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/integrations/sdpa_attention.py:102 in sdpa_attention_forward, code: attn_output = attn_output.transpose(1,
-      2).contiguous()'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/integrations/sdpa_attention.py#L102 in sdpa_attention_forward,
+      code: attn_output = attn_output.transpose(1, 2).contiguous()'
     marks: bf16operation
   - name: torch.reshape.3
     op: torch.reshape
     inputs:
       - tensor:
           shape: [1, 1, 32, 128]
+          stride: [4096, 128, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - value: (1, 1, -1)
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:173 in forward, code: attn_output = attn_output.reshape(*input_shape,
-      -1).contiguous()'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L173 in forward, code:
+      attn_output = attn_output.reshape(*input_shape, -1).contiguous()'
     marks:
       - bf16operation
       - constant
@@ -1467,24 +2073,34 @@ cases:
     inputs:
       - tensor:
           shape: [1, 1, 4096]
+          stride: [4096, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:173 in forward, code: attn_output = attn_output.reshape(*input_shape,
-      -1).contiguous()'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L173 in forward, code:
+      attn_output = attn_output.reshape(*input_shape, -1).contiguous()'
     marks: bf16operation
   - name: torch.nn.functional.linear.9
     op: torch.nn.functional.linear
     inputs:
       - tensor:
           shape: [1, 1, 4096]
+          stride: [4096, 128, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - tensor:
           shape: [5120, 4096]
+          stride: [4096, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - value: null
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:174 in forward, code: attn_output = self.o_proj(attn_output)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L174 in forward, code:
+      attn_output = self.o_proj(attn_output)'
     marks:
       - bf16operation
       - constant
@@ -1493,28 +2109,41 @@ cases:
     inputs:
       - tensor:
           shape: [1, 1, 5120]
+          stride: [5120, 5120, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - tensor:
           shape: [1, 1, 5120]
+          stride: [5120, 5120, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:248 in forward, code: hidden_states = residual + hidden_states'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L248 in forward, code:
+      hidden_states = residual + hidden_states'
     marks: bf16operation
   - name: torch.nn.functional.linear.10
     op: torch.nn.functional.linear
     inputs:
       - tensor:
           shape: [1, 1, 5120]
+          stride: [5120, 5120, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - tensor:
           shape: [16384, 5120]
+          stride: [5120, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - value: null
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:190 in forward, code: down_proj = self.down_proj(self.act_fn(self.gate_proj(x))
-      * self.up_proj(x))'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L190 in forward, code:
+      down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))'
     marks:
       - bf16operation
       - constant
@@ -1523,38 +2152,53 @@ cases:
     inputs:
       - tensor:
           shape: [1, 1, 16384]
+          stride: [16384, 16384, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/activations.py:103 in forward, code: return nn.functional.silu(input)'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/activations.py#L103 in forward, code: return nn.functional.silu(input)'
     marks: bf16operation
-  - name: torch.mul.16
+  - name: torch.mul.20
     op: torch.mul
     inputs:
       - tensor:
           shape: [1, 1, 16384]
+          stride: [16384, 16384, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - tensor:
           shape: [1, 1, 16384]
+          stride: [16384, 16384, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:190 in forward, code: down_proj = self.down_proj(self.act_fn(self.gate_proj(x))
-      * self.up_proj(x))'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L190 in forward, code:
+      down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))'
     marks: bf16operation
   - name: torch.nn.functional.linear.11
     op: torch.nn.functional.linear
     inputs:
       - tensor:
           shape: [1, 1, 16384]
+          stride: [16384, 16384, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - tensor:
           shape: [5120, 16384]
+          stride: [16384, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - value: null
-    description: 'site-packages/transformers/models/ministral3/modeling_ministral3.py:190 in forward, code: down_proj = self.down_proj(self.act_fn(self.gate_proj(x))
-      * self.up_proj(x))'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/ministral3/modeling_ministral3.py#L190 in forward, code:
+      down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))'
     marks:
       - bf16operation
       - constant
@@ -1563,11 +2207,37 @@ cases:
     inputs:
       - tensor:
           shape: [1, 1, 5120]
+          stride: [5120, 5120, 1]
+          storage_offset: 0
           dtype: torch.bfloat16
+          device: cuda:0
           init: rand
       - py: (slice(None, None, None), slice(-1, None, None), slice(None, None, None))
-    description: 'site-packages/transformers/models/mistral3/modeling_mistral3.py:466 in forward, code: logits = self.lm_head(hidden_states[:, slice_indices,
-      :])'
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/mistral3/modeling_mistral3.py#L466 in forward, code: logits
+      = self.lm_head(hidden_states[:, slice_indices, :])'
+    marks:
+      - bf16operation
+      - constant
+  - name: torch.nn.functional.linear.12
+    op: torch.nn.functional.linear
+    inputs:
+      - tensor:
+          shape: [1, 1, 5120]
+          stride: [5120, 5120, 1]
+          storage_offset: 0
+          dtype: torch.bfloat16
+          device: cuda:0
+          init: rand
+      - tensor:
+          shape: [131072, 5120]
+          stride: [5120, 1]
+          storage_offset: 0
+          dtype: torch.bfloat16
+          device: cuda:0
+          init: rand
+      - value: null
+    description: 'https://github.com/huggingface/transformers/blob/v5.2.0/src/transformers/models/mistral3/modeling_mistral3.py#L466 in forward, code: logits
+      = self.lm_head(hidden_states[:, slice_indices, :])'
     marks:
       - bf16operation
       - constant
