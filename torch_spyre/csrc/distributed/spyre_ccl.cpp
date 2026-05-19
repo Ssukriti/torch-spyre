@@ -448,6 +448,7 @@ c10::intrusive_ptr<Work> SpyreCCLBackend::allgather(
       group_context_->allgather(output_tensors, input_tensor);
   work->work_schedule_->start();
   work->work_schedule_->wait();
+  return work;
 }
 
 c10::intrusive_ptr<Work> SpyreCCLBackend::_allgather_base(
@@ -477,6 +478,7 @@ c10::intrusive_ptr<Work> SpyreCCLBackend::allreduce(
       group_context_->allreduce(tensor, convert_reduce_op_type(opts.reduceOp));
   work->work_schedule_->start();
   work->work_schedule_->wait();
+  return work;
 }
 
 c10::intrusive_ptr<Work> SpyreCCLBackend::allreduce_coalesced(
@@ -564,6 +566,7 @@ c10::intrusive_ptr<Work> SpyreCCLBackend::gather(
       group_context_->gather(output_tensors, input_tensor, opts.rootRank);
   work->work_schedule_->start();
   work->work_schedule_->wait();
+  return work;
 }
 
 c10::intrusive_ptr<Work> SpyreCCLBackend::reduce(
@@ -585,6 +588,7 @@ c10::intrusive_ptr<Work> SpyreCCLBackend::reduce(
       tensor, convert_reduce_op_type(opts.reduceOp), opts.rootRank);
   work->work_schedule_->start();
   work->work_schedule_->wait();
+  return work;
 }
 
 c10::intrusive_ptr<Work> SpyreCCLBackend::reduce_scatter(
