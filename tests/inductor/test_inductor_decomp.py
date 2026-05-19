@@ -27,7 +27,12 @@ FP16_EPS = torch.finfo(torch.float16).eps  # 0.0009765625
 
 
 class TestOps(unittest.TestCase, metaclass=ParameterizedTestMeta):
-    torch.manual_seed(0xAFFE)
+    torch.manual_seed(0xAFFE)  # seeds cached_randn/cached_xavier calls in PARAMS below
+
+    def setUp(self):
+        super().setUp()
+        torch.manual_seed(0xAFFE)
+
     # Define parameter sets for each base test method
     # If parameterized, the base test method will not be invoked
     # The test methods that are not parameterized will be invoked
@@ -109,7 +114,12 @@ class TestOps(unittest.TestCase, metaclass=ParameterizedTestMeta):
         )
 
         with pytest.warns(torch_spyre.ops.fallbacks.FallbackWarning) as record:
-            compare_with_cpu(fn, x, cpu_compile=True)
+            # run_eager=False: the eager path also triggers a FallbackWarning
+            # (sin dispatches to the CPU fallback kernel), and pytest.warns
+            # overrides the module-level "once" filter, so we'd capture 2
+            # warnings instead of 1.  This test only cares about decomposition
+            # table integrity, so skip eager.
+            compare_with_cpu(fn, x, cpu_compile=True, run_eager=False)
 
         assert len(record) == 1, "Exactly one FallbackWarning should be encountered!"
 

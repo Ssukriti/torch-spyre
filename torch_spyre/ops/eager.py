@@ -13,8 +13,44 @@
 # limitations under the License.
 
 import torch
-from torch_spyre._C import SpyreTensorLayout, as_strided_with_layout
 import torch_spyre.ops.fallbacks  # noqa: F401
+from .fallbacks import _get_op_overloads
+import torch_spyre._C as _C
+import warnings
+import functools
+import inspect
+import operator
+
+
+aten = torch.ops.aten
+
+
+# Decorator to keep track of compiled variant
+def compile_once(op, **compile_kwargs):
+    def decorator(fn):
+        compiled = None
+
+        @functools.wraps(fn)
+        def wrapper(*args, **kwargs):
+            nonlocal compiled
+            nonlocal op
+            if compiled is None:
+                if isinstance(op, str):
+                    op = operator.attrgetter(op)(torch.ops)
+                compiled = torch.compile(op, **compile_kwargs)
+            return fn(*args, compiled=compiled, **kwargs)
+
+        # We remove the `compiled` arg from the signature to have
+        # a clean signature.
+        old_signature = inspect.signature(fn)
+        params = dict(old_signature.parameters)
+        params.pop("compiled", None)
+        new_signature = old_signature.replace(parameters=params.values())
+        wrapper.__signature__ = new_signature
+
+        return wrapper
+
+    return decorator
 
 
 def maybe_wrap_dim(dim: int, ndims: int) -> int:
@@ -23,68 +59,62 @@ def maybe_wrap_dim(dim: int, ndims: int) -> int:
     return dim
 
 
-@torch.library.register_kernel("aten::mm", ["spyre"])  # type:ignore
-def spyre__mm(self: torch.Tensor, mat2: torch.Tensor) -> torch.Tensor:
-    compiled_mm = torch.compile(torch.mm, dynamic=False)
-    return compiled_mm(self, mat2)
+def dispatch_to_torch_compile(*args, compiled=None, **kwargs):
+    return compiled(*args, **kwargs)
 
 
-@torch.library.register_kernel("aten::mm.out", ["spyre"])  # type:ignore
-def spyre__mm_out(
-    self: torch.Tensor, mat2: torch.Tensor, out: torch.Tensor
-) -> torch.Tensor:
-    compiled_mm = torch.compile(torch.mm, dynamic=False)
-    return compiled_mm(self, mat2, out=out)
+def register_torch_compile_kernel(ops):
+    for op in _get_op_overloads(ops):
+        if "Tensor" not in str(op._schema):
+            # there are some ops that do not take in Tensors
+            # like aten.sum.int
+            continue
+        if "dtype" in op.name():
+            # ops that change dtype are not supported yet
+            continue
+        compiled_kernel = compile_once(op, dynamic=False)(dispatch_to_torch_compile)
+        torch.library.register_kernel(op.name(), ["spyre"])(compiled_kernel)
 
 
-@torch.library.register_kernel("aten::linear", ["spyre"])
-def spyre__linear(
-    input: torch.Tensor, weight: torch.Tensor, bias: torch.Tensor | None = None
-) -> torch.Tensor:
-    def _linear(input, weight, bias):
-        weight = weight.transpose(-1, -2).contiguous()
-        while weight.dim() < input.dim():
-            weight = torch.unsqueeze(weight, 0)
-        out = input @ weight
-        if bias:
-            out += bias
-        return out
-
-    # Prevents double tracing
-    if not torch.compiler.is_compiling():
-        compiled_linear = torch.compile(_linear, dynamic=False)
-    else:
-        compiled_linear = _linear
-    return compiled_linear(input, weight, bias)
-
-
-@torch.library.register_kernel("aten::addmm", ["spyre"])  # type:ignore
-def spyre__addmm_default(
-    self: torch.Tensor,
-    mat1: torch.Tensor,
-    mat2: torch.Tensor,
-    beta: int | float | bool | complex = 1,
-    alpha: int | float | bool | complex = 1,
-) -> torch.Tensor:
-    # TODO: Add support for beta when constants work
-    # TODO: Use inductor decomp when available
-    mm_result = torch.ops.aten.mm(mat1, mat2)
-    return torch.ops.aten.add.Tensor(mm_result, self, alpha=alpha)
-
-
-@torch.library.register_kernel("aten::addmm.out", ["spyre"])  # type:ignore
-def spyre__addmm_out(
-    self: torch.Tensor,
-    mat1: torch.Tensor,
-    mat2: torch.Tensor,
-    beta: int | float | bool | complex = 1,
-    alpha: int | float | bool | complex = 1,
-    out: torch.Tensor | None = None,
-) -> torch.Tensor:
-    # TODO: Add support for beta when constants work
-    # TODO: Use inductor decomp when available
-    mm_result = torch.ops.aten.mm(mat1, mat2)
-    return torch.ops.aten.add.out(mm_result, self, alpha=alpha, out=out)
+register_torch_compile_kernel(
+    [
+        aten.mm,
+        aten.silu.out,
+        aten.mish.out,
+        aten.abs,
+        aten.add,
+        aten.bitwise_not,
+        aten.logical_not,
+        aten.bmm,
+        aten.cat,
+        aten.div,
+        aten.exp,
+        aten.floor,
+        aten.log,
+        aten.mean,
+        aten.mul,
+        aten.reciprocal,
+        aten.neg,
+        aten.relu,
+        aten.rsqrt,
+        aten.sigmoid,
+        aten._softmax,
+        aten.stack,
+        aten.sum,
+        aten.sqrt,
+        aten.tanh,
+        aten.sub,
+        aten.addmm,
+        aten.eq,
+        aten.ge,
+        aten.gt,
+        aten.lt,
+        aten.maximum,
+        aten.minimum,
+        aten.pow,
+        aten.linalg_vector_norm,
+    ]
+)
 
 
 @torch.library.register_kernel("aten::fill_.Scalar", ["spyre"])  # type:ignore
@@ -96,7 +126,7 @@ def spyre__fill_scalar(
     return self
 
 
-@torch.library.register_kernel("aten::normal_", ["spyre"])
+@torch.library.register_kernel("aten::normal_", ["spyre"])  # type:ignore
 def spyre__normal_(self, mean=0.0, std=1.0, *, generator=None):
     # "normal_" generates a random tensor, thus copying
     # "self" back from SPYRE to CPU is not needed.
@@ -107,165 +137,6 @@ def spyre__normal_(self, mean=0.0, std=1.0, *, generator=None):
     cpu_tmp.normal_(mean, std, generator=generator)
     self.copy_(cpu_tmp)
     return self
-
-
-@torch.library.register_kernel("aten::permute", ["spyre"])  # type:ignore
-def spyre__permute(self: torch.Tensor, dims: list[int]) -> torch.Tensor:
-    ndims = self.dim()
-    dims = [maybe_wrap_dim(d, ndims) for d in dims]
-
-    sizes = list(self.shape)
-    strides = list(self.stride())
-    new_sizes = [sizes[d] for d in dims]
-    new_strides = [strides[d] for d in dims]
-
-    prev_stl: SpyreTensorLayout = self.device_tensor_layout()  # type:ignore
-    assert isinstance(prev_stl, SpyreTensorLayout)
-    inv_perm = [0] * ndims
-    for new_pos, old_pos in enumerate(dims):
-        inv_perm[old_pos] = new_pos
-
-    new_dim_map = [inv_perm[dim] for dim in prev_stl.dim_map]
-
-    new_stl = SpyreTensorLayout(
-        prev_stl.device_size, new_dim_map, prev_stl.device_dtype
-    )
-
-    result = as_strided_with_layout(
-        self, tuple(new_sizes), tuple(new_strides), self.storage_offset(), new_stl
-    )
-    return result
-
-
-@torch.library.register_kernel("aten::transpose.int", ["spyre"])  # type:ignore
-def spyre__transpose_int(self: torch.Tensor, dim0: int, dim1: int) -> torch.Tensor:
-    ndims = self.dim()
-    dim0 = maybe_wrap_dim(dim0, ndims)
-    dim1 = maybe_wrap_dim(dim1, ndims)
-
-    # Transpose of a tensor is a view operation.
-    if dim0 == dim1:
-        return torch.ops.aten.alias(self)
-
-    sizes = list(self.shape)
-    sizes[dim0], sizes[dim1] = sizes[dim1], sizes[dim0]
-    strides = list(self.stride())
-    strides[dim0], strides[dim1] = strides[dim1], strides[dim0]
-    prev_stl: SpyreTensorLayout = self.device_tensor_layout()  # type:ignore
-    assert isinstance(prev_stl, SpyreTensorLayout)
-    dim_map = prev_stl.dim_map
-    for idx, dim in enumerate(dim_map):
-        if dim == dim0:
-            dim_map[idx] = dim1
-        elif dim == dim1:
-            dim_map[idx] = dim0
-    new_stl = SpyreTensorLayout(prev_stl.device_size, dim_map, prev_stl.device_dtype)
-
-    result = as_strided_with_layout(
-        self, tuple(sizes), tuple(strides), self.storage_offset(), new_stl
-    )
-    return result
-
-
-# derived from https://github.com/pytorch/pytorch/blob/f91f262275e12bd6249a2bcd2c3c06e0c78e20ee/aten/src/ATen/native/TensorShape.cpp#L3897
-# with changes specific for spyre
-def infer_squeeze_geometry(
-    tensor: torch.Tensor, dims: int | list[int] | None = None
-) -> tuple[tuple[int, ...], tuple[int, ...], SpyreTensorLayout]:
-    sizes: list[int] = []
-    strides: list[int] = []
-    current_stl: SpyreTensorLayout = tensor.device_tensor_layout()  # type:ignore
-    assert isinstance(current_stl, SpyreTensorLayout)
-    stick_dim = current_stl.host_stick_dim()
-    if stick_dim is None:
-        raise ValueError("Squeezing of sparse tensors not implemented")
-
-    for idx in range(tensor.dim()):
-        dim_check = False
-
-        # Handle the cases where dims is set
-        if isinstance(dims, int):
-            dim_check = idx != dims
-        elif isinstance(dims, list):
-            dim_check = idx not in dims
-
-        # Keep any dim > 1 that fulfills the dim_check
-        if dim_check or tensor.size(idx) != 1:
-            sizes.append(tensor.size(idx))
-            strides.append(tensor.stride(idx))
-
-    new_stl = torch_spyre._C.compute_view_layout(
-        tensor.size(), torch.Size(sizes), current_stl
-    )
-
-    return tuple(sizes), tuple(strides), new_stl
-
-
-@torch.library.register_kernel("aten::squeeze", ["spyre"])  # type:ignore
-def spyre__squeeze(self: torch.Tensor) -> torch.Tensor:
-    sizes, strides, new_stl = infer_squeeze_geometry(self)
-
-    result = as_strided_with_layout(
-        self, sizes, strides, self.storage_offset(), new_stl
-    )
-    return result
-
-
-@torch.library.register_kernel("aten::squeeze.dim", ["spyre"])  # type:ignore
-def spyre__squeeze_dim(self: torch.Tensor, dim: int) -> torch.Tensor:
-    sizes, strides, new_stl = infer_squeeze_geometry(self, dim)
-
-    result = as_strided_with_layout(
-        self, sizes, strides, self.storage_offset(), new_stl
-    )
-    return result
-
-
-@torch.library.register_kernel("aten::squeeze.dims", ["spyre"])  # type:ignore
-def spyre__squeeze_dims(self: torch.Tensor, dim: list[int]) -> torch.Tensor:
-    sizes, strides, new_stl = infer_squeeze_geometry(self, dim)
-
-    result = as_strided_with_layout(
-        self, sizes, strides, self.storage_offset(), new_stl
-    )
-    return result
-
-
-# derived from https://github.com/pytorch/pytorch/blob/f91f262275e12bd6249a2bcd2c3c06e0c78e20ee/aten/src/ATen/native/TensorShape.cpp#L3943
-# with changes specific to Spyre
-def infer_unsqueeze_geometry(
-    tensor: torch.Tensor, dim: int
-) -> tuple[tuple[int, ...], tuple[int, ...], SpyreTensorLayout]:
-    sizes = list(tensor.size())
-    strides = list(tensor.stride())
-
-    new_stride = 1
-    if dim < tensor.dim():
-        new_stride = sizes[dim] * strides[dim]
-
-    sizes.insert(dim, 1)
-    strides.insert(dim, new_stride)
-
-    current_stl = tensor.device_tensor_layout()
-    stick_dim = current_stl.host_stick_dim()
-    if stick_dim is None:
-        raise ValueError("Unsqueezing of sparse tensors not implemented")
-
-    new_stl = torch_spyre._C.compute_view_layout(
-        tensor.size(), torch.Size(sizes), current_stl
-    )
-
-    return tuple(sizes), tuple(strides), new_stl
-
-
-@torch.library.register_kernel("aten::unsqueeze", ["spyre"])  # type:ignore
-def spyre__unsqueeze(self: torch.Tensor, dim: int) -> torch.Tensor:
-    sizes, strides, new_stl = infer_unsqueeze_geometry(self, dim)
-
-    result = as_strided_with_layout(
-        self, sizes, strides, self.storage_offset(), new_stl
-    )
-    return result
 
 
 @torch.library.register_kernel("aten::zero_", ["spyre"])  # type:ignore
@@ -279,21 +150,7 @@ def spyre__zero_(self: torch.Tensor) -> torch.Tensor:
     return self
 
 
-@torch.library.register_kernel("aten::silu.out", ["spyre"])
-def spyre__silu_out(self: torch.Tensor, out: torch.Tensor = None) -> torch.Tensor:
-    # Out variant
-    compiled_silu = torch.compile(torch.ops.aten.silu.out, dynamic=False)
-    return compiled_silu(self, out=out)
-
-
-@torch.library.register_kernel("aten::mish.out", ["spyre"])
-def spyre__mish_out(self: torch.Tensor, out: torch.Tensor = None) -> torch.Tensor:
-    # Out variant
-    compiled_mish = torch.compile(torch.ops.aten.mish.out, dynamic=False)
-    return compiled_mish(self, out=out)
-
-
-@torch.library.register_kernel("aten::uniform_", "spyre")
+@torch.library.register_kernel("aten::uniform_", "spyre")  # type:ignore
 def spyre__uniform_(self, from_=0.0, to=1.0, generator=None):
     # Create a new tensor on cpu
     cpu_tmp = torch.empty_like(self, device="cpu", memory_format=torch.preserve_format)
@@ -305,6 +162,46 @@ def spyre__uniform_(self, from_=0.0, to=1.0, generator=None):
     self.copy_(cpu_tmp)
 
     return self
+
+
+@torch.library.register_kernel("aten::_local_scalar_dense", "spyre")
+def spyre__local_scalar_dense(self):
+    return self.cpu().item()
+
+
+@torch.library.register_kernel("aten::_copy_from", ["spyre"])
+def spyre__copy_from(self, dst, non_blocking=False):
+    if self.numel() == 0:
+        return dst
+
+    # Check if views of same data
+    if (
+        self.data_ptr() == dst.data_ptr()
+        and self.storage_offset() == dst.storage_offset()
+        and self.stride() == dst.stride()
+        and self.size() == dst.size()
+        and self.dtype == dst.dtype
+        and self.is_conj() == dst.is_conj()
+        and self.is_neg() == dst.is_neg()
+    ):
+        return dst
+
+    if (self.device.type == "cpu" and dst.device.type == "spyre") or (
+        self.device.type == "spyre" and dst.device.type == "cpu"
+    ):
+        _C.copy_tensor(self, dst, non_blocking)
+        return dst
+    elif self.device.type == "spyre" and self.device == dst.device:
+        torch.ops.spyre.copy_from_d2d(self, dst)
+        return dst
+    else:
+        if non_blocking:
+            warnings.warn(
+                f"non_blocking is set to {non_blocking}", UserWarning, stacklevel=2
+            )
+
+        torch.ops.aten._copy_from.default(self, dst, non_blocking)
+        return dst
 
 
 # INSERT_CODEGEN_HERE

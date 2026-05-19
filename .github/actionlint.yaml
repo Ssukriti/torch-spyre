@@ -1,0 +1,16 @@
+# Configuration related to self-hosted runner.
+self-hosted-runner:
+  # Labels of self-hosted runner in array of strings.
+  labels:
+    - self-hosted
+    - official-aiu-x86-64-arc-runner-set-v1
+    - official-aiu-x86-64-arc-runner-set-v2
+    - official-aiu-x86-64-arc-runner-set-v3
+    - x86_64
+    - spyre_pf
+    - spyre_pf_x1
+    - spyre_pf_x2
+    - spyre_pf_x4
+    - linux
+    - image_torch_spyre
+    - image_spyre_inference

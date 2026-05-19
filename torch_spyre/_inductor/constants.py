@@ -13,9 +13,8 @@
 # limitations under the License.
 
 BATCH_MATMUL_OP = "batchmatmul"
-CLONE_OP = "clone"
-MATMUL_REDUCTION_OP = "matmul"
-TRANSPOSE_OP = "transpose"
+IDENTITY_OP = "identity"
+RESTICKIFY_OP = "ReStickifyOpHBM"
 
 DEVICE_NAME = "spyre"
 
@@ -30,13 +29,16 @@ SEGMENT_OFFSETS = [
     0x1800000000,
 ]
 
+INTERMEDIATES_SEGMENT = 0x0
+SEGMENT_SIZE = 0x400000000
+
 SPYRE_FP32_OPS = [
     "add",
     "sub",
     "mul",
     "where",
     "realdiv",
-    "relu",
+    "relufwd",
     "reciprocal",
     "layernormscale",
     "abs",
@@ -45,12 +47,22 @@ SPYRE_FP32_OPS = [
     "sigmoid",
     "exx2",
     "layernormnorm",
-    "clone",
+    "identity",
+    "overwrite",
+    "topkvalue",
+    "topkindex",
+    "floor",
+    "maximum",
+    "minimum",
 ]
 
-LAYOUT_INPUT_LABELS = ["INPUT", "KERNEL", "KERNEL_IDX"]
-LAYOUT_OUTPUT_LABELS = ["OUTPUT"]
+TOPK_OPS = {"topkvalue", "topkindex"}
+
+LAYOUT_LABELS = ["OUTPUT", "KERNEL", "INPUT", "KERNEL_IDX"]
+MATMUL_LAYOUT_LABELS = ["INPUT", "KERNEL", "OUTPUT", "KERNEL_IDX"]
+
 
 # Populate more valid labels from deeptools here if needed
-INPUT_DIM_LABELS = ["mb", "x", "y", "i", "j"]
+INPUT_DIM_LABELS = ["mb", "x", "y", "i", "j", "ki", "kj"]
 OUTPUT_DIM_LABELS = ["out"]
+MATMUL_DIM_LABELS = ["x", "mb", "y", "ki", "kj", "out", "in"]

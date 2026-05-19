@@ -10,10 +10,15 @@ import typing
 __all__: list[str] = [
     "DataFormats",
     "SpyreTensorLayout",
+    "_SpyreStreamBase",
+    "current_stream",
+    "default_stream",
+    "get_stream_from_pool",
+    "set_current_stream",
+    "synchronize",
     "as_strided_with_layout",
-    "compute_view_layout",
-    "convert_artifacts",
     "empty_with_layout",
+    "copy_tensor",
     "encode_constant",
     "free_runtime",
     "get_device_dtype",
@@ -110,8 +115,8 @@ class DataFormats:
     def value(self) -> int: ...
 
 class SpyreTensorLayout:
-    __hash__: typing.ClassVar[None] = None  # type: ignore
-    def __eq__(self, arg0: SpyreTensorLayout) -> bool: ...  # type: ignore
+    def __hash__(self) -> int: ...
+    def __eq__(self, arg0: SpyreTensorLayout) -> bool: ...  # type: ignore[override]
     @typing.overload
     def __init__(
         self,
@@ -122,6 +127,7 @@ class SpyreTensorLayout:
     def __init__(
         self,
         host_size: collections.abc.Sequence[typing.SupportsInt],
+        host_strides: collections.abc.Sequence[typing.SupportsInt],
         dtype: torch.dtype,
         dim_order: collections.abc.Sequence[typing.SupportsInt],
     ) -> None: ...
@@ -129,20 +135,101 @@ class SpyreTensorLayout:
     def __init__(
         self,
         device_size: collections.abc.Sequence[typing.SupportsInt],
-        dim_map: collections.abc.Sequence[typing.SupportsInt],
+        stride_map: collections.abc.Sequence[typing.SupportsInt],
         device_dtype: DataFormats,
     ) -> None: ...
     def __repr__(self) -> str: ...
     def __str__(self) -> str: ...
     def elems_per_stick(self) -> int: ...
-    def host_stick_dim(self) -> int: ...
-    def similar_dim_order(self, arg0: typing.SupportsInt) -> list[int]: ...
     @property
     def device_dtype(self) -> DataFormats: ...
     @property
     def device_size(self) -> list[int]: ...
     @property
-    def dim_map(self) -> list[int]: ...
+    def stride_map(self) -> list[int]: ...
+
+class _SpyreStreamBase:
+    """
+    C++ SpyreStream wrapper class.
+
+    Represents a stream of execution on a Spyre device.
+    """
+    def synchronize(self) -> None:
+        """Wait for all operations on this stream to complete"""
+        ...
+
+    def query(self) -> bool:
+        """Check if all operations on this stream have completed"""
+        ...
+
+    def device(self) -> torch.device:
+        """Get the device associated with this stream"""
+        ...
+
+    def id(self) -> int:
+        """Get the stream ID"""
+        ...
+
+    def priority(self) -> int:
+        """Get the stream priority"""
+        ...
+
+    def __repr__(self) -> str: ...
+
+def get_stream_from_pool(device: torch.device, priority: int = 0) -> _SpyreStreamBase:
+    """
+    Get a stream from the pool for the specified device and priority.
+
+    Args:
+        device: The device for which to get a stream
+        priority: Stream priority (lower = higher priority). Default: 0
+
+    Returns:
+        A SpyreStream object from the pool
+    """
+    ...
+
+def current_stream(device: torch.device) -> _SpyreStreamBase:
+    """
+    Get the current stream for a device.
+
+    Args:
+        device: The device to query
+
+    Returns:
+        The current stream for the device
+    """
+    ...
+
+def default_stream(device: torch.device) -> _SpyreStreamBase:
+    """
+    Get the default stream for a device.
+
+    Args:
+        device: The device to query
+
+    Returns:
+        The default stream (stream ID 0) for the device
+    """
+    ...
+
+def set_current_stream(stream: _SpyreStreamBase) -> None:
+    """
+    Set the current stream for the stream's device.
+
+    Args:
+        stream: The stream to set as current
+    """
+    ...
+
+def synchronize(device: torch.device | None = None) -> None:
+    """
+    Synchronize all streams on a device or all devices.
+
+    Args:
+        device: The device to synchronize. If None, synchronizes all devices.
+    """
+    ...
 
 def as_strided_with_layout(
     arg0: torch.Tensor,
@@ -151,10 +238,17 @@ def as_strided_with_layout(
     arg3: typing.SupportsInt | None,
     arg4: SpyreTensorLayout,
 ) -> torch.Tensor: ...
-def compute_view_layout(
-    arg0: tuple[int, ...], arg1: tuple[int, ...], arg2: SpyreTensorLayout
-) -> SpyreTensorLayout: ...
-def convert_artifacts(arg0: str) -> None: ...
+def copy_tensor(
+    self: torch.Tensor, dst: torch.Tensor, non_blocking: bool = False
+) -> None:
+    """
+    Copy tensor
+
+    Args:
+        self or dst: one of that must be on spyre device
+    """
+    ...
+
 def empty_with_layout(
     arg0: tuple[int, ...],
     arg1: SpyreTensorLayout,
@@ -173,7 +267,9 @@ def get_downcast_warning() -> bool:
 
 def get_elem_in_stick(arg0: torch.dtype) -> int: ...
 def get_spyre_tensor_layout(arg0: torch.Tensor) -> SpyreTensorLayout: ...
-def launch_kernel(arg0: str, arg1: collections.abc.Sequence[torch.Tensor]) -> None: ...
+def launch_kernel(
+    code_dir: str, args: collections.abc.Sequence[torch.Tensor]
+) -> None: ...
 def set_downcast_warning(arg0: bool) -> None:
     """
     Enable/disable downcast warnings for this process.

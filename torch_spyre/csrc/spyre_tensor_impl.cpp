@@ -79,26 +79,58 @@ auto get_generic_stick_layout(std::vector<int32_t> host_dim_order)
   return dim_map;
 }
 
-std::optional<int32_t> SpyreTensorLayout::host_stick_dim() {
-  int32_t stick_dim = this->dim_map.back();
-  if (stick_dim == -1) {
-    return std::nullopt;
-  } else {
-    return stick_dim;
+std::vector<int32_t> generic_stick_dim_order(int32_t num_dims) {
+  std::vector<int32_t> dim_order;
+  for (int32_t i = 0; i < num_dims; i++) {
+    dim_order.push_back(i);
   }
+  return dim_order;
+}
+
+static std::vector<int64_t> compute_host_stride(
+    const std::vector<int64_t>& host_size) {
+  int n = host_size.size();
+  std::vector<int64_t> host_stride(n);
+  int64_t stride = 1;
+  for (int i = n - 1; i >= 0; --i) {
+    host_stride[i] = stride;
+    stride *= host_size[i];
+  }
+  return host_stride;
+}
+
+static std::vector<int64_t> dim_map_to_stride_map(
+    const std::vector<int32_t>& dim_map, const std::vector<int64_t>& host_size,
+    const std::vector<int64_t>& host_stride,
+    const std::vector<int64_t>& device_size) {
+  int n = dim_map.size();
+  std::vector<int64_t> stride_map(n, -1);
+  std::vector<int64_t> last_stride(n, -1);
+  for (int j = n - 1; j >= 0; --j) {
+    int32_t d = dim_map[j];
+    if (d == -1 || host_size[d] == 1) {
+      stride_map[j] = -1;
+    } else if (last_stride[d] == -1) {
+      stride_map[j] = host_stride[d];
+      last_stride[d] = stride_map[j] * device_size[j];
+    } else {
+      stride_map[j] = last_stride[d];
+      last_stride[d] = stride_map[j] * device_size[j];
+    }
+  }
+  return stride_map;
 }
 
 void SpyreTensorLayout::init(std::vector<int64_t> host_size,
                              c10::ScalarType dtype) {
   int host_dims = static_cast<int32_t>(host_size.size());
-  std::vector<int32_t> dim_order;
-  for (int32_t i = 0; i < host_dims; i++) {
-    dim_order.push_back(i);
-  }
-  init(host_size, dtype, dim_order);
+  auto host_strides = compute_host_stride(host_size);
+  auto dim_order = generic_stick_dim_order(host_dims);
+  init(host_size, host_strides, dtype, dim_order);
 }
 
 void SpyreTensorLayout::init(std::vector<int64_t> host_size,
+                             std::vector<int64_t> host_strides,
                              c10::ScalarType dtype,
                              std::vector<int32_t> dim_order) {
   TORCH_CHECK((host_size.size() == dim_order.size()) ||
@@ -114,23 +146,23 @@ void SpyreTensorLayout::init(std::vector<int64_t> host_size,
   if (host_size.size() == 0) {
     // Degenerate case of 0-dimension tensor (ie, a scalar)
     this->device_size.resize(2);
-    this->dim_map.resize(2);
     this->device_size[0] = 1;
     this->device_size[1] = this->elems_per_stick();
-    this->dim_map[0] = -1;
-    this->dim_map[1] = -1;
+    this->stride_map.resize(2);
+    this->stride_map[0] = -1;
+    this->stride_map[1] = -1;
     return;
   }
 
   // Computing tiling
-  this->dim_map = spyre::get_generic_stick_layout(dim_order);
-  this->device_size.resize(this->dim_map.size());
+  auto dim_map = spyre::get_generic_stick_layout(dim_order);
+  this->device_size.resize(dim_map.size());
   bool sparse = dim_order.back() == -1;
   auto elems_in_stick = sparse ? 1 : this->elems_per_stick();
-  auto stick_dim = this->dim_map.back();
-  this->device_size[this->dim_map.size() - 1] = this->elems_per_stick();
-  for (int i = 0; i < this->dim_map.size() - 1; i++) {
-    auto dim = this->dim_map[i];
+  auto stick_dim = dim_map.back();
+  this->device_size[dim_map.size() - 1] = this->elems_per_stick();
+  for (int i = 0; i < dim_map.size() - 1; i++) {
+    auto dim = dim_map[i];
     if (dim == stick_dim) {
       if (sparse) {
         this->device_size[i] = 1;
@@ -142,6 +174,8 @@ void SpyreTensorLayout::init(std::vector<int64_t> host_size,
       this->device_size[i] = host_size[dim];
     }
   }
+  this->stride_map = dim_map_to_stride_map(dim_map, host_size, host_strides,
+                                           this->device_size);
 }
 
 std::string SpyreTensorLayout::toString() const {
@@ -154,10 +188,10 @@ std::string SpyreTensorLayout::toString() const {
       ss << ", ";
     }
   }
-  ss << "], dim_map =[";
-  for (size_t i = 0; i < this->dim_map.size(); i++) {
-    ss << this->dim_map[i];
-    if (i < this->dim_map.size() - 1) {
+  ss << "], stride_map =[";
+  for (size_t i = 0; i < this->stride_map.size(); i++) {
+    ss << this->stride_map[i];
+    if (i < this->stride_map.size() - 1) {
       ss << ", ";
     }
   }
@@ -213,7 +247,8 @@ SpyreTensorImpl::shallow_copy_and_detach_core(
   }
   auto impl = c10::make_intrusive<SpyreTensorImpl>(storage_, key_set_,
                                                    data_type_, spyre_layout);
-
+  impl->dma_sizes = this->dma_sizes;
+  impl->dma_strides = this->dma_strides;
   copy_tensor_metadata(
       /*src_impl=*/this,
       /*dest_impl=*/impl.get(),
@@ -241,8 +276,11 @@ at::intrusive_ptr<c10::TensorImpl> SpyreTensorImpl::shallow_copy_and_detach(
 // storage basic operation (view) to work
 void SpyreTensorImpl::shallow_copy_from(
     const at::intrusive_ptr<at::TensorImpl>& impl) {
-  DEBUGINFO("Parent's implementation");
+  auto spyre_impl = static_cast<SpyreTensorImpl*>(impl.get());
   at::TensorImpl::shallow_copy_from(impl);
+  this->dma_sizes = spyre_impl->dma_sizes;
+  this->dma_strides = spyre_impl->dma_strides;
+  this->spyre_layout = spyre_impl->spyre_layout;
 }
 
 uint64_t get_device_size_in_bytes(SpyreTensorLayout stl) {
