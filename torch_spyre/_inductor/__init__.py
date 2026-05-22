@@ -12,6 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+import sys
+
+# CRITICAL: Set this before ANY torch imports to disable precompiled headers
+os.environ["TORCHINDUCTOR_CPP_WRAPPER_PRECOMPILE_HEADERS"] = "0"
+
+# Monkey-patch codecache BEFORE any other torch imports
+try:
+    from torch._inductor import codecache
+    _original_precompile_header = getattr(codecache, '_precompile_header', None)
+    if _original_precompile_header:
+        def _patched_precompile_header(*args, **kwargs):
+            return None
+        codecache._precompile_header = _patched_precompile_header
+        print("Successfully patched _precompile_header to avoid openssl dependency", file=sys.stderr)
+except Exception as e:
+    print(f"Warning: Could not patch _precompile_header: {e}", file=sys.stderr)
+
 from .constants import DEVICE_NAME
 from .patches import enable_spyre_context
 from . import config

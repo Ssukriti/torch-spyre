@@ -1,8 +1,26 @@
-import torch
+# Copyright 2025 The Torch-Spyre Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-LOWERED_OPS = {}
+import sys
+import torch
+from torch._inductor import lowering as lowering
+
 
 def register_lowerings():
-    LOWERED_OPS.update({
-        torch.ops._c10d_functional.all_reduce: torch.ops.spyre.all_reduce,
-    })
+    """Register Inductor lowerings for Spyre distributed operations."""
+    print("[LOWERINGS] Registering fallback lowerings for spyre.all_reduce_ and spyre.broadcast_", file=sys.stderr)
+    lowering.make_fallback(torch.ops.spyre.all_reduce_.default)
+    lowering.make_fallback(torch.ops.spyre.broadcast_.default)
+
+# Made with Bob

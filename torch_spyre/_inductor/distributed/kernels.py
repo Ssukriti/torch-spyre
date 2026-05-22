@@ -82,7 +82,7 @@ if not hasattr(torch, "_spyre_distributed_kernels_registered"):
         out.copy_(cpu_tensor)
         return out
 
-    spyre_impl.impl("all_reduce", spyre_all_reduce_impl)
+    spyre_impl.impl("all_reduce_", spyre_all_reduce_impl)
 
     # ------------------------------------------------------------
     # Meta impl for tracing / fake tensor propagation
@@ -93,3 +93,98 @@ if not hasattr(torch, "_spyre_distributed_kernels_registered"):
         return torch.empty_like(x, device="meta")
 
     spyre_meta.impl("all_reduce", spyre_all_reduce_meta)
+
+    # ------------------------------------------------------------
+    # Broadcast operation - using spyre-comms on Spyre tensors
+    # ------------------------------------------------------------
+    
+    def is_fake_or_meta_tensor(x):
+        """Check if tensor is a FakeTensor or meta tensor (used during tracing)"""
+        return (
+            x.device.type == "meta"
+            or type(x).__name__ == "FakeTensor"
+            or getattr(x, "fake_mode", None) is not None
+        )
+    
+    def spyre_broadcast_impl(x, src_rank=0, group_name="default"):
+        """Spyre broadcast implementation using spyre-comms library
+        
+        Broadcasts tensor from src_rank to all other ranks using spyre-comms.
+        Works directly on Spyre device tensors without copying to CPU.
+        """
+        import spyre_comms
+        import torch_spyre
+        
+        # Check if this is a FakeTensor or meta tensor (during tracing/compilation)
+        # These don't have actual storage, so we just return the input
+        if is_fake_or_meta_tensor(x):
+            print(f"[FakeTensor/Meta] Skipping broadcast during tracing")
+            return x
+        
+        # Check if we're in a tracing/compilation context by checking if storage is allocated
+        # During AOT Autograd, tensors may not have storage allocated
+        if not x.is_contiguous() or x.untyped_storage().size() == 0:
+            print(f"[No Storage] Skipping broadcast during AOT Autograd (storage size: {x.untyped_storage().size()})")
+            return x
+        
+        # Get the world context
+        ctx = spyre_comms.get_world_context()
+        rank = ctx.get_rank()
+        
+        print(f"[Rank {rank}] Spyre broadcast called - using spyre-comms (src_rank={src_rank})")
+        print(f"[Rank {rank}] Input tensor: shape={x.shape}, dtype={x.dtype}, device={x.device}")
+        print(f"[Rank {rank}] Tensor is_contiguous={x.is_contiguous()}, numel={x.numel()}")
+        
+        # Ensure tensor is contiguous
+        if not x.is_contiguous():
+            print(f"[Rank {rank}] WARNING: Tensor not contiguous, making contiguous")
+            x = x.contiguous()
+        
+        # Get tensor shape and dtype
+        shape = list(x.shape)
+        
+        # Map torch dtype to spyre_comms dtype
+        dtype_map = {
+            torch.float32: spyre_comms.TensorDataTypeEnum.float32,
+            torch.float16: spyre_comms.TensorDataTypeEnum.float16,
+            torch.bfloat16: spyre_comms.TensorDataTypeEnum.bfloat16,
+            torch.int32: spyre_comms.TensorDataTypeEnum.int32,
+            torch.int64: spyre_comms.TensorDataTypeEnum.int64,
+        }
+        
+        spyre_dtype = dtype_map.get(x.dtype, spyre_comms.TensorDataTypeEnum.float32)
+        tensor_info = spyre_comms.TensorInfo(spyre_dtype, spyre_comms.TensorShape(shape))
+        
+        print(f"[Rank {rank}] Creating spyre_comms tensor with shape={shape}, dtype={spyre_dtype}")
+        
+        # Create spyre_comms tensor
+        buffer_tensor = spyre_comms.Tensor(tensor_info)
+        
+        # Get CompositeAddress pointer from Spyre tensor
+        # This returns the address as an integer that we can pass to spyre-comms
+        composite_addr_ptr = torch_spyre._C.get_composite_address_ptr(x)
+        
+        print(f"[Rank {rank}] Got CompositeAddress pointer: 0x{composite_addr_ptr:x}")
+        
+        # Set the Spyre device address directly (no CPU copy)
+        buffer_tensor.set_spyre_device_address(composite_addr_ptr)
+        
+        print(f"[Rank {rank}] Set device address, calling broadcast...")
+        
+        # Execute broadcast on Spyre device
+        work = ctx.broadcast(buffer_tensor, src_rank)
+        work.start()
+        work.wait()
+        
+        print(f"[Rank {rank}] Spyre broadcast completed successfully")
+        
+        # Return the input tensor (broadcast modifies in-place)
+        return x
+    
+    spyre_impl.impl("broadcast_", spyre_broadcast_impl)
+    
+    # Meta implementation for tracing
+    def spyre_broadcast_meta(x, src_rank=0, group_name="default"):
+        return torch.empty_like(x, device="meta")
+    
+    spyre_meta.impl("broadcast_", spyre_broadcast_meta)

@@ -17,6 +17,10 @@ import threading
 import types
 import importlib
 
+# Disable precompiled headers to avoid openssl dependency
+# This must be set before any torch imports
+os.environ.setdefault("TORCHINDUCTOR_CPP_WRAPPER_PRECOMPILE_HEADERS", "0")
+
 from .constants import DEVICE_NAME
 
 from . import memory

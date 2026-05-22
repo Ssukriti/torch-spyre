@@ -13,12 +13,31 @@
 # limitations under the License.
 
 from contextlib import contextmanager
+import os
+import sys
 
 import torch
 from torch._inductor.graph import GraphLowering
 from torch._inductor.utils import InputType
 from torch._inductor.virtualized import V
 from typing import Callable, Optional
+
+# Set this as early as possible to disable precompiled headers
+# This avoids the openssl dependency issue
+os.environ["TORCHINDUCTOR_CPP_WRAPPER_PRECOMPILE_HEADERS"] = "0"
+
+# Monkey-patch the _precompile_header function to return None (disable precompiled headers)
+try:
+    from torch._inductor import codecache
+    _original_precompile_header = codecache._precompile_header
+    
+    def _patched_precompile_header(*args, **kwargs):
+        # Return None to disable precompiled headers
+        return None
+    
+    codecache._precompile_header = _patched_precompile_header
+except Exception as e:
+    print(f"Warning: Could not patch _precompile_header: {e}", file=sys.stderr)
 
 
 @contextmanager
