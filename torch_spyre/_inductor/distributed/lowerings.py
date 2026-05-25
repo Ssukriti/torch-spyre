@@ -15,12 +15,23 @@
 import sys
 import torch
 from torch._inductor import lowering as lowering
+from torch_spyre._inductor.lowering import spyre_lowerings
 
 
 def register_lowerings():
     """Register Inductor lowerings for Spyre distributed operations."""
-    print("[LOWERINGS] Registering fallback lowerings for spyre.all_reduce_ and spyre.broadcast_", file=sys.stderr)
+    # TEMPORARILY COMMENTED OUT FOR DEBUGGING
+    # make_fallback may be overriding our custom lower_spyre_broadcast
+    # We want to test if our custom lowering works without the fallback
+    
+    print(f"[REGISTER_LOWERINGS] Called")
+    print(f"[REGISTER_LOWERINGS] TEMPORARILY NOT calling make_fallback for broadcast")
+    print(f"[REGISTER_LOWERINGS] Testing if custom lowering works without fallback")
+    
+    # COMMENTED OUT: This may override our custom lowering
+    # lowering.make_fallback(torch.ops.spyre.broadcast.default)
+    
+    # Keep all_reduce as fallback for now
     lowering.make_fallback(torch.ops.spyre.all_reduce_.default)
-    lowering.make_fallback(torch.ops.spyre.broadcast_.default)
 
 # Made with Bob

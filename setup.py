@@ -114,7 +114,29 @@ if "RUNTIME_INSTALL_DIR" in os.environ:
 
 INCLUDE_DIRS += [os.environ["SEN_COMMON_HEADERS"]]
 
-LIBRARIES = ["sendnn", "sendnn_interface", "flex"]
+# Add spyre-comms include and library directories
+# Check for SPYRE_COMMS_INSTALL_DIR first (where it's installed after cmake build)
+# Otherwise fall back to SPYRE_COMMS_DIR (source directory)
+SPYRE_COMMS_INSTALL_DIR = os.environ.get("SPYRE_COMMS_INSTALL_DIR", "")
+if SPYRE_COMMS_INSTALL_DIR:
+    INCLUDE_DIRS += [Path(SPYRE_COMMS_INSTALL_DIR) / "include"]
+    LIBRARY_DIRS += [Path(SPYRE_COMMS_INSTALL_DIR) / "lib"]
+else:
+    # Fall back to source directory structure
+    SPYRE_COMMS_DIR = os.environ.get("SPYRE_COMMS_DIR", str(ROOT_DIR.parent / "spyre-comms"))
+    INCLUDE_DIRS += [Path(SPYRE_COMMS_DIR) / "include"]
+    # Try to find the library in common build locations
+    spyre_comms_lib_paths = [
+        Path(SPYRE_COMMS_DIR) / "build",  # Library is directly in build/
+        Path(SPYRE_COMMS_DIR) / "build" / "lib",
+        Path(SPYRE_COMMS_DIR) / "lib",
+    ]
+    for lib_path in spyre_comms_lib_paths:
+        if lib_path.exists():
+            LIBRARY_DIRS += [lib_path]
+            break
+
+LIBRARIES = ["sendnn", "sendnn_interface", "flex", "spyre_comms"]
 
 # FIXME: added no-deprecated as this fails in sentensor_shape.hpp
 # - we need to fix there
@@ -123,7 +145,7 @@ LIBRARIES = ["sendnn", "sendnn_interface", "flex"]
 # Set TORCH_SPYRE_DEBUG=1 to build with -O0 for easier debugging
 NO_OPT_BUILD = os.environ.get("TORCH_SPYRE_DEBUG", "0") == "1"
 
-EXTRA_CXX_FLAGS = ["-g", "-Wall", "-Wno-deprecated", "-std=c++17"]
+EXTRA_CXX_FLAGS = ["-g", "-Wall", "-Wno-deprecated", "-std=c++20"]
 if NO_OPT_BUILD:
     EXTRA_CXX_FLAGS += ["-O0"]
 

@@ -26,10 +26,11 @@ def lower_collectives(gm: fx.GraphModule):
 
             with graph.inserting_after(all_reduce_node):
                 new_node = graph.call_function(
-                    torch.ops.spyre.all_reduce_,
+                    torch.ops.spyre.all_reduce_.default,
                     args=all_reduce_node.args,
                     kwargs=all_reduce_node.kwargs,
                 )
+                print(f"   Created node with target: {new_node.target}")
 
             if wait_users:
                 for wait_node in wait_users:
@@ -50,14 +51,21 @@ def lower_collectives(gm: fx.GraphModule):
                 and u.target == torch.ops._c10d_functional.wait_tensor
             ]
 
-            print(">> Lowering _c10d_functional.broadcast + wait_tensor → spyre.broadcast_")
+            print(">> Lowering _c10d_functional.broadcast + wait_tensor → spyre.broadcast")
+            print(f"   Original broadcast_node.args: {broadcast_node.args}")
+            print(f"   Original broadcast_node.kwargs: {broadcast_node.kwargs}")
 
             with graph.inserting_after(broadcast_node):
                 new_node = graph.call_function(
-                    torch.ops.spyre.broadcast_,
+                    torch.ops.spyre.broadcast.default,
                     args=broadcast_node.args,
                     kwargs=broadcast_node.kwargs,
                 )
+                print(f"   Created node with target: {new_node.target}")
+                print(f"   New node type: {type(new_node.target)}")
+                print(f"   New node.args: {new_node.args}")
+                print(f"   New node.kwargs: {new_node.kwargs}")
+                print(f"   Is target the OpOverload? {new_node.target is torch.ops.spyre.broadcast.default}")
 
             if wait_users:
                 for wait_node in wait_users:

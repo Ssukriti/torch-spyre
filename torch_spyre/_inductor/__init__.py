@@ -115,9 +115,15 @@ def enable_spyre_compile_fx_wrapper():
                 "decompositions", torch._inductor.decomposition.decompositions
             )
 
+            # Check if broadcast is in decompositions
+            # NOTE: We WANT broadcast in decompositions to prevent graph partitioning
+            # The decomposition is a passthrough that signals to Inductor this op is known
+            print(f"[DECOMP CHECK] torch.ops.spyre.broadcast.default in decompositions: {torch.ops.spyre.broadcast.default in decomps}")
+            if torch.ops.spyre.broadcast.default in decomps:
+                print(f"[DECOMP CHECK] Found broadcast decomposition (this prevents partitioning): {decomps[torch.ops.spyre.broadcast.default]}")
             
             # allowing lowering for any devices - to show CPU and Spyre demo
-            # only a temporary change to enable CPU demo 
+            # only a temporary change to enable CPU demo
             #if _uses_spyre(gm, example_inputs):
             if 1:
                 torch.spyre._impl._lazy_init()
@@ -129,6 +135,13 @@ def enable_spyre_compile_fx_wrapper():
                     # with the appropriate spyre decompositions
                     # and yielded as `spyre_context_decompositions` from the CM
 
+                    # Check again after enable_spyre_context
+                    # NOTE: We WANT broadcast in decompositions to prevent graph partitioning
+                    print(f"[DECOMP CHECK AFTER CM] torch.ops.spyre.broadcast.default in spyre_context_decompositions: {torch.ops.spyre.broadcast.default in spyre_context_decompositions}")
+                    if torch.ops.spyre.broadcast.default in spyre_context_decompositions:
+                        print(f"[DECOMP CHECK AFTER CM] Found broadcast decomposition (keeping it to prevent partitioning)")
+                        # DO NOT remove it - it prevents graph partitioning!
+
                     kwargs["decompositions"] = spyre_context_decompositions
                     print("FX graph before lowering")
                     print(gm.graph)
@@ -137,13 +150,155 @@ def enable_spyre_compile_fx_wrapper():
 
                     print("FX graph after lowering")
                     print(gm.graph)
+                    
+                    # Debug: Check if broadcast is still in the graph
+                    has_broadcast = any("broadcast" in str(node.target) for node in gm.graph.nodes)
+                    print(f"[BEFORE INDUCTOR] Graph has broadcast node: {has_broadcast}")
+                    if has_broadcast:
+                        for node in gm.graph.nodes:
+                            if "broadcast" in str(node.target):
+                                print(f"[BEFORE INDUCTOR] Broadcast node: {node.target}, args: {node.args}")
+                    
+                    print(f"[CALLING INDUCTOR] About to call torch._inductor.compile_fx.compile_fx")
+                    print(f"[CALLING INDUCTOR] Graph module type: {type(gm)}")
+                    print(f"[CALLING INDUCTOR] Decompositions keys sample: {list(kwargs.get('decompositions', {}).keys())[:5]}")
 
-                    return _orig(
-                        gm,
-                        example_inputs,
-                        *args,
-                        **kwargs,
-                    )
+                    # Register broadcast lowering in the global lowering table BEFORE calling Inductor
+                    # This ensures it's available during graph partitioning
+                    from torch._inductor import lowering as inductor_lowering
+                    from torch_spyre._inductor.lowering import lower_spyre_broadcast
+                    
+                    # Save original if it exists
+                    original_broadcast_lowering = inductor_lowering.lowerings.get(torch.ops.spyre.broadcast.default)
+                    
+                    # Register our lowering
+                    inductor_lowering.lowerings[torch.ops.spyre.broadcast.default] = lower_spyre_broadcast
+                    print(f"[PRE-INDUCTOR] Registered broadcast lowering in global table")
+                    print(f"[PRE-INDUCTOR] torch.ops.spyre.broadcast.default in lowerings: {torch.ops.spyre.broadcast.default in inductor_lowering.lowerings}")
+                    
+                    # CRITICAL: Patch the partitioner to prevent it from splitting out broadcast
+                    # The partitioner checks if an op is "supported" before deciding to compile it
+                    # We need to tell it that torch.ops.spyre.broadcast.default is supported
+                    try:
+                        from torch._inductor.fx_passes.joint_graph import patterns as joint_patterns
+                        # Add broadcast to the set of ops that should not cause graph breaks
+                        if hasattr(joint_patterns, '_misc_patterns_handler'):
+                            print(f"[PRE-INDUCTOR] Patching joint_graph patterns")
+                    except Exception as e:
+                        print(f"[PRE-INDUCTOR] Could not patch joint_graph: {e}")
+                    
+                    # COMMENTED OUT: The identity decomposition was being EXECUTED by compile_fx
+                    # This caused the broadcast to be replaced with a passthrough, preventing lowering
+                    # We need a different approach to prevent partitioning
+                    
+                    # decomps = kwargs.get('decompositions', {})
+                    # if torch.ops.spyre.broadcast.default not in decomps:
+                    #     def broadcast_identity(x, src_rank=0, group_name='default'):
+                    #         return x
+                    #     decomps[torch.ops.spyre.broadcast.default] = broadcast_identity
+                    #     kwargs['decompositions'] = decomps
+                    #     print(f"[PRE-INDUCTOR] Added broadcast identity decomposition to prevent partitioning")
+                    
+                    print(f"[PRE-INDUCTOR] NOT adding decomposition - testing without it")
+
+                    # Patch compile_fx internals to see what's happening
+                    import torch._inductor.compile_fx as compile_fx_module
+                    
+                    # Try to patch the actual compilation function that creates GraphLowering
+                    if hasattr(compile_fx_module, 'compile_fx_inner'):
+                        original_compile_fx_inner = compile_fx_module.compile_fx_inner
+                        
+                        def patched_compile_fx_inner(gm_inner, example_inputs_inner, *inner_args, **inner_kwargs):
+                            print(f"\n[COMPILE_FX_INNER] Called!")
+                            print(f"[COMPILE_FX_INNER] Graph nodes:")
+                            for node in gm_inner.graph.nodes:
+                                if 'broadcast' in str(node.target):
+                                    print(f"[COMPILE_FX_INNER]   *** BROADCAST NODE: {node.target}")
+                                else:
+                                    print(f"[COMPILE_FX_INNER]   {node.op} {node.target}")
+                            return original_compile_fx_inner(gm_inner, example_inputs_inner, *inner_args, **inner_kwargs)
+                        
+                        compile_fx_module.compile_fx_inner = patched_compile_fx_inner
+                    
+                    try:
+                        # CRITICAL DEBUG: Check which registry has our lowering
+                        from torch._inductor import lowering as inductor_lowering
+                        from torch_spyre._inductor.lowering import spyre_lowerings, lower_spyre_broadcast
+                        
+                        op = torch.ops.spyre.broadcast.default
+                        
+                        print(f"\n{'='*80}")
+                        print(f"[REGISTRY DEBUG] Checking lowering registries before calling Inductor:")
+                        print(f"{'='*80}")
+                        print(f"[REGISTRY] op = {op}")
+                        print(f"\n[REGISTRY] Global Inductor Registry (inductor_lowering.lowerings):")
+                        print(f"  - op in registry: {op in inductor_lowering.lowerings}")
+                        if op in inductor_lowering.lowerings:
+                            registered_func = inductor_lowering.lowerings.get(op)
+                            print(f"  - registered function: {registered_func}")
+                            print(f"  - is our lower_spyre_broadcast: {registered_func is lower_spyre_broadcast}")
+                            print(f"  - function name: {getattr(registered_func, '__name__', 'unknown')}")
+                        else:
+                            print(f"  - NOT FOUND in global registry!")
+                        
+                        print(f"\n[REGISTRY] Spyre-specific Registry (spyre_lowerings):")
+                        print(f"  - op in registry: {op in spyre_lowerings}")
+                        if op in spyre_lowerings:
+                            registered_func = spyre_lowerings.get(op)
+                            print(f"  - registered function: {registered_func}")
+                            print(f"  - is our lower_spyre_broadcast: {registered_func is lower_spyre_broadcast}")
+                        else:
+                            print(f"  - NOT FOUND in spyre registry!")
+                        
+                        print(f"\n[REGISTRY] Expected state:")
+                        print(f"  ✓ op in inductor_lowering.lowerings: True")
+                        print(f"  ✓ is our lower_spyre_broadcast: True")
+                        print(f"{'='*80}\n")
+                        
+                        print(f"[BEFORE _ORIG GRAPH CODE] Graph module code:")
+                        print(f"{'='*80}")
+                        print(gm.code)
+                        print(f"{'='*80}\n")
+                        
+                        # CRITICAL: Remove any broadcast decomposition that may have been added
+                        # by enable_spyre_context or elsewhere
+                        decomps = kwargs.get("decompositions", {})
+                        print(f"[FINAL DECOMP CHECK] broadcast in decomps before _orig: {torch.ops.spyre.broadcast.default in decomps}")
+                        if torch.ops.spyre.broadcast.default in decomps:
+                            print(f"[FINAL DECOMP CHECK] Found broadcast decomposition, REMOVING it")
+                            print(f"[FINAL DECOMP CHECK] Decomposition was: {decomps[torch.ops.spyre.broadcast.default]}")
+                            decomps.pop(torch.ops.spyre.broadcast.default, None)
+                            kwargs["decompositions"] = decomps
+                        print(f"[FINAL DECOMP CHECK] broadcast in decomps after pop: {torch.ops.spyre.broadcast.default in kwargs.get('decompositions', {})}")
+                        
+                        print(f"\n[CALLING _ORIG] About to call torch._inductor.compile_fx.compile_fx")
+                        print(f"[CALLING _ORIG] Invariants:")
+                        print(f"  ✓ Graph contains torch.ops.spyre.broadcast.default")
+                        print(f"  ✓ Global lowering table has lower_spyre_broadcast")
+                        print(f"  ✓ Decompositions do NOT contain broadcast")
+                        result = _orig(
+                            gm,
+                            example_inputs,
+                            *args,
+                            **kwargs,
+                        )
+                        print(f"[AFTER _ORIG] Returned from compile_fx")
+                    finally:
+                        # Restore compile_fx_inner if we patched it
+                        if hasattr(compile_fx_module, 'compile_fx_inner') and 'original_compile_fx_inner' in locals():
+                            compile_fx_module.compile_fx_inner = original_compile_fx_inner
+                        
+                        # COMMENTED OUT: Don't restore the lowering yet
+                        # If compile is lazy, we may be removing it before the returned function compiles
+                        # # Restore original if it existed, otherwise remove
+                        # if original_broadcast_lowering is not None:
+                        #     inductor_lowering.lowerings[torch.ops.spyre.broadcast.default] = original_broadcast_lowering
+                        # else:
+                        #     inductor_lowering.lowerings.pop(torch.ops.spyre.broadcast.default, None)
+                        print(f"[FINALLY] Keeping broadcast lowering in registry (not restoring)")
+                    
+                    print(f"[AFTER INDUCTOR] Compilation complete, result type: {type(result)}")
+                    return result
 
             return _orig(gm, example_inputs, *args, **kwargs)
 

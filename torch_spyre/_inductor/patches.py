@@ -140,6 +140,94 @@ def enable_spyre_context(
         old_update_scheduler(self)
 
     GraphLowering._update_scheduler = _spyre_update_scheduler  # type: ignore[method-assign]
+    
+    # Patch run_node to debug broadcast lowering
+    old_run_node = GraphLowering.run_node
+    
+    def _debug_run_node(self: GraphLowering, node):
+        # Log ALL nodes to see if broadcast is being processed
+        if hasattr(node, 'op'):
+            if node.op == 'call_function' and hasattr(node, 'target'):
+                target_str = str(node.target)
+                if 'broadcast' in target_str or 'spyre' in target_str:
+                    print(f"\n[RUN_NODE] *** FOUND SPYRE/BROADCAST NODE ***")
+                    print(f"[RUN_NODE] Node: {node}")
+                    print(f"[RUN_NODE] Target: {node.target}")
+                    print(f"[RUN_NODE] Op: {node.op}")
+                    print(f"[RUN_NODE] Args: {node.args}")
+                    print(f"[RUN_NODE] Checking lowering.lowerings for: {node.target}")
+                    import torch._inductor.lowering as lowering
+                    print(f"[RUN_NODE] Is in lowering.lowerings? {node.target in lowering.lowerings}")
+                    if node.target in lowering.lowerings:
+                        print(f"[RUN_NODE] Lowering function: {lowering.lowerings[node.target]}")
+        
+        result = old_run_node(self, node)
+        
+        if hasattr(node, 'target') and 'broadcast' in str(node.target):
+            print(f"[RUN_NODE] Result type: {type(result)}")
+            print(f"[RUN_NODE] Result: {result}\n")
+        
+        return result
+    
+    GraphLowering.run_node = _debug_run_node  # type: ignore[method-assign]
+    
+    # Also patch the graph processing to see ALL nodes being processed
+    old_run = GraphLowering.run
+    
+    def _debug_run(self: GraphLowering, *args):
+        print(f"\n[GRAPH_LOWERING] Starting graph lowering")
+        print(f"[GRAPH_LOWERING] Graph has {len(list(self.graph.nodes))} nodes")
+        for node in self.graph.nodes:
+            if hasattr(node, 'target') and ('broadcast' in str(node.target) or 'spyre' in str(node.target)):
+                print(f"[GRAPH_LOWERING] Found spyre/broadcast node in graph: {node.target}")
+        result = old_run(self, *args)
+        print(f"[GRAPH_LOWERING] Finished graph lowering\n")
+        return result
+    
+    GraphLowering.run = _debug_run  # type: ignore[method-assign]
+    
+    # Patch call_function to handle torch.ops.spyre.broadcast
+    old_call_function = GraphLowering.call_function
+    
+    def _patched_call_function(self: GraphLowering, target, args, kwargs):
+        # Handle torch.ops.spyre.broadcast.default directly
+        if target == torch.ops.spyre.broadcast.default:
+            print(f"\n[CALL_FUNCTION] *** HANDLING spyre.broadcast.default ***")
+            print(f"[CALL_FUNCTION] Args: {args}")
+            print(f"[CALL_FUNCTION] Kwargs: {kwargs}")
+            
+            # Import the IR node class
+            from torch_spyre._inductor.ir import SpyreBroadcastFallback
+            from torch._inductor import ir
+            
+            # Extract arguments: broadcast(Tensor x, int src_rank, str group_name)
+            x = args[0] if len(args) > 0 else kwargs.get('x')
+            src_rank = args[1] if len(args) > 1 else kwargs.get('src_rank', 0)
+            group_name = args[2] if len(args) > 2 else kwargs.get('group_name', 'default')
+            
+            print(f"[CALL_FUNCTION] Creating SpyreBroadcastFallback IR node")
+            print(f"[CALL_FUNCTION]   x={x}, src_rank={src_rank}, group_name={group_name}")
+            
+            # Create the IR node with correct signature:
+            # __init__(self, op_overload, x, src_rank, group_name)
+            broadcast_node = SpyreBroadcastFallback(
+                op_overload=target,
+                x=x,
+                src_rank=src_rank,
+                group_name=group_name
+            )
+            
+            print(f"[CALL_FUNCTION] Created IR node: {broadcast_node}")
+            print(f"[CALL_FUNCTION] Wrapping in TensorBox")
+            
+            # Wrap in TensorBox and return
+            result = ir.TensorBox.create(broadcast_node)
+            print(f"[CALL_FUNCTION] Returning: {result}\n")
+            return result
+        
+        return old_call_function(self, target, args, kwargs)
+    
+    GraphLowering.call_function = _patched_call_function  # type: ignore[method-assign]
 
     with (
         spyre_data_types(),
@@ -155,3 +243,6 @@ def enable_spyre_context(
             joint_graph.pass_patterns[:] = origin_pass
             Loops.has_large_inner_fn = old_loop
             GraphLowering._update_scheduler = old_update_scheduler  # type: ignore[method-assign]
+            GraphLowering.run_node = old_run_node  # type: ignore[method-assign]
+            GraphLowering.run = old_run  # type: ignore[method-assign]
+            GraphLowering.call_function = old_call_function  # type: ignore[method-assign]
