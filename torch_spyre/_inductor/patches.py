@@ -177,9 +177,12 @@ def enable_spyre_context(
     def _debug_run(self: GraphLowering, *args):
         print(f"\n[GRAPH_LOWERING] Starting graph lowering")
         print(f"[GRAPH_LOWERING] Graph has {len(list(self.graph.nodes))} nodes")
-        for node in self.graph.nodes:
-            if hasattr(node, 'target') and ('broadcast' in str(node.target) or 'spyre' in str(node.target)):
-                print(f"[GRAPH_LOWERING] Found spyre/broadcast node in graph: {node.target}")
+        print(f"[GRAPH_LOWERING] ALL NODES IN GRAPH:")
+        for i, node in enumerate(self.graph.nodes):
+            target_str = str(node.target) if hasattr(node, 'target') else 'no target'
+            print(f"[GRAPH_LOWERING]   {i}: op={node.op}, target={target_str}")
+            if 'broadcast' in target_str and 'spyre' in target_str:
+                print(f"[GRAPH_LOWERING]   ^^^ THIS IS THE BROADCAST NODE WE'RE LOOKING FOR!")
         result = old_run(self, *args)
         print(f"[GRAPH_LOWERING] Finished graph lowering\n")
         return result
