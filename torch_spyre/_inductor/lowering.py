@@ -52,8 +52,12 @@ def register_spyre_lowering(
     type_promotion_kind=lowering.ELEMENTWISE_TYPE_PROMOTION_KIND.DEFAULT,
     override_return_dtype=None,
     convert_input_to_bool=False,
-    lowering_dict=spyre_lowerings,
+    lowering_dict=None,  # Changed: default to None, will use global lowering.lowerings
 ):
+    # If no lowering_dict specified, use the global Inductor lowerings registry
+    # This ensures GraphLowering can find our lowerings
+    if lowering_dict is None:
+        lowering_dict = lowering.lowerings
     name = name or op.__name__
 
     ensure_default_handler(name)

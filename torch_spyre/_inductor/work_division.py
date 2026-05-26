@@ -17,7 +17,7 @@ import dataclasses
 import math
 import itertools
 from sympy import Expr, Symbol, divisors
-from .ir import SpyreConstantFallback, SpyreEmptyFallback
+from .ir import SpyreConstantFallback, SpyreEmptyFallback, SpyreBroadcastFallback
 
 import torch
 from torch._inductor.ir import (
@@ -753,6 +753,9 @@ def _iter_computed_buffers(operations: list[Operation]):
         elif isinstance(op, ExternKernel):
             if isinstance(op, (SpyreConstantFallback, SpyreEmptyFallback)):
                 # Work division not supported on allocation/constant kernels
+                pass
+            elif isinstance(op, SpyreBroadcastFallback):
+                # Work division not supported on broadcast kernels
                 pass
             else:
                 logger.warning(f"unhandled node type {type(op)}")

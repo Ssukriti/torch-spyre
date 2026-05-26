@@ -193,19 +193,19 @@ class SpyreBroadcastFallback(ir.ExternKernel):
         """Generate code to call torch.ops.spyre.broadcast at runtime."""
         print(f"[CODEGEN] SpyreBroadcastFallback.codegen called for {self.get_name()}")
         
-        # Generate runtime call: output = torch.ops.spyre.broadcast(x, src_rank, group_name)
-        # The op itself handles cloning and broadcasting
+        # Get input tensor name
+        input_tensor = self.inputs[0]
+        input_name = input_tensor.codegen_reference()
+        
+        # Get constant args (src_rank, group_name)
+        src_rank, group_name = self.constant_args
+        
+        # Generate the call using wrapper.writeline (same pattern as SpyreConstantFallback)
         output_name = self.get_name()
-        wrapper.generate_extern_kernel_alloc_and_find_schema_if_needed(
-            output_name,
-            self.python_kernel_name,
-            self.cpp_kernel_name,
-            self.codegen_args(),
-            self.cpp_op_schema,
-            self.cpp_kernel_key,
-            self.op_overload,
+        wrapper.writeline(
+            f"{output_name} = torch.ops.spyre.broadcast({input_name}, {src_rank}, '{group_name}')"
         )
-        print(f"[CODEGEN] Generated call for {output_name}")
+        print(f"[CODEGEN] Generated: {output_name} = torch.ops.spyre.broadcast({input_name}, {src_rank}, '{group_name}')")
 
     def should_allocate(self) -> bool:
         # Return False - the op returns a new tensor
@@ -236,7 +236,5 @@ class SpyreBroadcastFallback(ir.ExternKernel):
         )
         # CRITICAL: Register this buffer and operation with the graph
         # Without these calls, the IR node is created but never scheduled/codegen'd
-        self.name = V.graph.register_buffer(self)
-        V.graph.register_operation(self)
         self.name = V.graph.register_buffer(self)
         V.graph.register_operation(self)

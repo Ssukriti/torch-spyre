@@ -100,111 +100,51 @@ if not hasattr(torch, "_spyre_distributed_kernels_registered"):
     spyre_meta.impl("all_reduce", spyre_all_reduce_meta)
 
     # ------------------------------------------------------------
-    # Broadcast operation - using spyre-comms on Spyre tensors
+    # Broadcast operation - NOW USING @torch.library.custom_op in spyre_library.py
+    # ------------------------------------------------------------
+    # COMMENTED OUT: Old implementation replaced by @torch.library.custom_op
+    # The new approach automatically handles FunctionalTensor wrapping and
+    # guarantees fake implementation is called during compilation.
     # ------------------------------------------------------------
     
+    """
     def is_compile_time_tensor(x):
-        """Check if tensor is being used during compilation/tracing (not runtime)
-        
-        This includes:
-        - Meta tensors (device='meta')
-        - FakeTensors (used by AOT Autograd)
-        - FunctionalTensors (used by AOT Autograd functionalization)
-        - Tensors with null storage (fake tensors with real device)
-        """
-        # Check for meta device
+        # Check if tensor is being used during compilation/tracing (not runtime)
         if x.device.type == "meta":
             return True
-        
-        # Check for FakeTensor by type name
         if type(x).__name__ == "FakeTensor":
             return True
-        
-        # Check for FunctionalTensor by type name (AOT Autograd functionalization)
         if type(x).__name__ == "FunctionalTensor":
             return True
-        
-        # Check for fake_mode attribute
         if getattr(x, "fake_mode", None) is not None:
             return True
-        
-        # Check for null storage pointer (fake tensor with real device)
         try:
             if x.untyped_storage().data_ptr() == 0:
                 return True
         except Exception:
-            # If we can't check storage, assume it might be compile-time
             pass
-        
         return False
     
     def spyre_broadcast_impl(x, src_rank=0, group_name="default"):
-        """Spyre broadcast implementation using spyre-comms library
-        
-        Handles both compile-time (tracing) and runtime execution:
-        - During tracing: Returns empty_like for shape propagation
-        - At runtime: Performs actual broadcast using spyre-comms
-        
-        Functional broadcast: clones input, broadcasts into clone, returns clone.
-        This matches the functional schema: broadcast(Tensor x) -> Tensor
-        """
+        # Old implementation - see spyre_library.py for new @torch.library.custom_op version
         import torch
-        
-        print(f"\n{'='*80}")
-        print(f"[BROADCAST_IMPL] KERNEL CALLED!")
-        print(f"[BROADCAST_IMPL] x.device={x.device}, src_rank={src_rank}")
-        print(f"[BROADCAST_IMPL] x.type={type(x).__name__}")
-        try:
-            print(f"[BROADCAST_IMPL] x.dispatch_keys={torch._C._dispatch_keys(x)}")
-        except Exception as e:
-            print(f"[BROADCAST_IMPL] Could not get dispatch keys: {e}")
-        
-        # COMMENTED OUT: x.clone() also causes AOT to replace the op
-        # Neither empty_like() nor clone() preserve the op through AOT
-        # The real fix is to not rewrite _c10d_functional.broadcast before AOT
-        
-        # Special handling for FunctionalTensor (AOT Autograd functionalization)
-        if type(x).__name__ == "FunctionalTensor":
-            print(f"[BROADCAST_IMPL] FUNCTIONALIZATION PATH: Detected FunctionalTensor")
-            print(f"[BROADCAST_IMPL] Returning x.clone() to preserve op in graph")
-            return x.clone()
-        
-        # Check if this is compile-time tensor (including FunctionalTensor)
-        if is_compile_time_tensor(x):
-            print(f"[BROADCAST_IMPL] COMPILE-TIME PATH: Detected fake/meta tensor")
-            print(f"[BROADCAST_IMPL] Returning empty_like for shape propagation")
-            print(f"[BROADCAST_IMPL] This means AOT Autograd is tracing, not lowering yet")
-            print(f"{'='*80}\n")
-            return torch.empty_like(x)
-        
-        print(f"[BROADCAST_IMPL] RUNTIME PATH: Real tensor detected")
-        print(f"[BROADCAST_IMPL] Performing actual broadcast using spyre-comms")
-        print(f"{'='*80}\n")
-        
-        # Real runtime execution starts here
         import spyre_comms
         import torch_spyre
         
-        # Real runtime execution starts here - clone input to create output buffer
+        if type(x).__name__ == "FunctionalTensor":
+            return x.clone()
+        if is_compile_time_tensor(x):
+            return torch.empty_like(x)
+        
         out = x.clone()
-        
-        # Get CompositeAddress from output for broadcast operation
         composite_addr_ptr = torch_spyre._C.get_composite_address_ptr(out)
-        
-        # Real runtime execution starts here
         ctx = spyre_comms.get_world_context()
         rank = ctx.get_rank()
         
-        print(f"[Rank {rank}] Spyre broadcast called - using spyre-comms")
-        
-        # Ensure output tensor is contiguous
         if not out.is_contiguous():
             raise RuntimeError("spyre.broadcast currently requires contiguous input")
         
-        # Get tensor shape and dtype
         shape = list(out.shape)
-        
-        # Map torch dtype to spyre_comms dtype
         dtype_map = {
             torch.float32: spyre_comms.TensorDataTypeEnum.float32,
             torch.float16: spyre_comms.TensorDataTypeEnum.float16,
@@ -215,32 +155,17 @@ if not hasattr(torch, "_spyre_distributed_kernels_registered"):
         
         spyre_dtype = dtype_map.get(out.dtype, spyre_comms.TensorDataTypeEnum.float32)
         tensor_info = spyre_comms.TensorInfo(spyre_dtype, spyre_comms.TensorShape(shape))
-        
-        print(f"[Rank {rank}] Creating spyre_comms tensor with shape={shape}, dtype={spyre_dtype}")
-        
-        # Create spyre_comms tensor
         buffer_tensor = spyre_comms.Tensor(tensor_info)
-        
-        print(f"[Rank {rank}] Got CompositeAddress pointer: 0x{composite_addr_ptr:x}")
-        
-        # Set the Spyre device address directly (no CPU copy)
         buffer_tensor.set_spyre_device_address(composite_addr_ptr)
         
-        print(f"[Rank {rank}] Set device address, calling broadcast...")
-        
-        # Execute broadcast on Spyre device (modifies out in-place)
         work = ctx.broadcast(buffer_tensor, src_rank)
         work.start()
         work.wait()
         
-        print(f"[Rank {rank}] Spyre broadcast completed successfully")
-        
-        # Return the output tensor with broadcasted data (functional semantics)
         return out
     
-    # Register Python implementation for runtime execution
-    # This will be called by the fallback generated by Inductor lowering
-    spyre_impl.impl("broadcast", spyre_broadcast_impl)
+    # OLD: spyre_impl.impl("broadcast", spyre_broadcast_impl)
+    """
     
     # COMMENTED OUT: Meta implementation is now registered via @torch.library.register_fake
     # in spyre_library.py. Registering here causes a conflict.
