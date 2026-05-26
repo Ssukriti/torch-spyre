@@ -87,3 +87,25 @@ Possible solutions:
 2. Implement a different integration point (pre-pass that converts broadcast to something Inductor understands)
 3. Use AOTAutograd's fallback mechanism properly
 4. Convert broadcast to ATen ops that Inductor can handle
+
+Root Cause: C10D ops are removed by AOT Autograd before GraphLowering, so registered lowerings are never called.
+
+Why it happens:
+
+Before _orig: Graph has _c10d_functional.broadcast and wait_tensor ✓
+Inside _orig: AOT Autograd executes the placeholder kernels and removes them
+GraphLowering sees: Only aten.add, spyre.constant, aten.mul ✗
+Why our approaches failed:
+
+Registering lowerings for C10D ops - Correct but never called (ops removed before lowering)
+Applying FX pass before _orig - Converts to spyre.broadcast, but AOT still executes and removes it
+register_fake - Won't work; AOT uses FunctionalTensor + AutogradPrivateUse1, not FakeTensor
+Solution Required:
+Apply lower_collectives(gm) FX pass AFTER AOT finishes but BEFORE GraphLowering starts. This requires finding or creating a hook point inside _orig (torch._inductor.compile_fx.compile_fx) between AOT and GraphLowering.
+
+Possible approaches:
+
+Patch torch._inductor.compile_fx internals to inject FX pass post-AOT
+Use Inductor's post_grad_custom_pre_pass config (if it runs post-AOT)
+Patch GraphLowering.__init__ to apply FX pass to the graph before processing
+The current code structure doesn't provide an easy hook at this point. We need to dig into Inductor's internals to find where AOT hands off to GraphLowering

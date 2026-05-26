@@ -145,19 +145,25 @@ def enable_spyre_compile_fx_wrapper():
                     kwargs["decompositions"] = spyre_context_decompositions
                     print("FX graph before lowering")
                     print(gm.graph)
-                    # Apply Spyre collective lowering
-                    gm = lower_collectives(gm)
+                    
+                    # TEMPORARILY DISABLED: Let C10D ops pass through to GraphLowering
+                    # We now register lowerings for _c10d_functional.broadcast and wait_tensor directly
+                    # so GraphLowering can handle them without rewriting before AOT
+                    print(f"[COMPILE_FX] SKIPPING lower_collectives - testing direct C10D lowerings")
+                    # gm = lower_collectives(gm)
 
-                    print("FX graph after lowering")
+                    print("FX graph after lowering (SKIPPED)")
                     print(gm.graph)
                     
-                    # Debug: Check if broadcast is still in the graph
-                    has_broadcast = any("broadcast" in str(node.target) for node in gm.graph.nodes)
-                    print(f"[BEFORE INDUCTOR] Graph has broadcast node: {has_broadcast}")
-                    if has_broadcast:
-                        for node in gm.graph.nodes:
-                            if "broadcast" in str(node.target):
-                                print(f"[BEFORE INDUCTOR] Broadcast node: {node.target}, args: {node.args}")
+                    # Debug: Check for C10D ops in the graph
+                    print(f"[BEFORE INDUCTOR] Checking for C10D ops in graph:")
+                    for node in gm.graph.nodes:
+                        if "broadcast" in str(node.target) or "wait_tensor" in str(node.target):
+                            print(f"  -> Found C10D op: {node.target}")
+                            print(f"     Type: {type(node.target)}")
+                            print(f"     Is broadcast.default: {node.target == torch.ops._c10d_functional.broadcast.default}")
+                            print(f"     Is wait_tensor.default: {node.target == torch.ops._c10d_functional.wait_tensor.default}")
+                            print(f"     Args: {node.args}")
                     
                     print(f"[CALLING INDUCTOR] About to call torch._inductor.compile_fx.compile_fx")
                     print(f"[CALLING INDUCTOR] Graph module type: {type(gm)}")

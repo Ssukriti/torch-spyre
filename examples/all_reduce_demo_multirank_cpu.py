@@ -1,3 +1,7 @@
+import os
+# Disable precompiled headers to avoid openssl dependency
+os.environ.setdefault("TORCHINDUCTOR_CPP_WRAPPER_PRECOMPILE_HEADERS", "0")
+
 import torch
 import torch.distributed as dist
 import torch.distributed.distributed_c10d as c10d
