@@ -43,7 +43,7 @@ from torch_spyre._C import (
 )
 from .errors import Unsupported
 from .constants import BATCH_MATMUL_OP, TOPK_OPS
-from .ir import FixedTiledLayout, SpyreConstantFallback
+from .ir import FixedTiledLayout, SpyreConstantFallback, SpyreBroadcastFallback
 from .pass_utils import (
     compute_restickify_target_layout,
     concretize_expr,
@@ -656,6 +656,10 @@ def propagate_spyre_tensor_layouts(
             op.layouts = [generic_layout(op)]
             op.restick_cost_fn = AnyInNode.from_args()
         elif isinstance(op, SpyreConstantFallback):
+            op.layouts = [generic_layout(op)]
+            op.restick_cost_fn = AnyInNode.from_args()
+        elif isinstance(op, SpyreBroadcastFallback):
+            # Broadcast preserves input layout - no special layout handling needed
             op.layouts = [generic_layout(op)]
             op.restick_cost_fn = AnyInNode.from_args()
         elif isinstance(op, ExternKernel):

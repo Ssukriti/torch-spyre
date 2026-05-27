@@ -20,7 +20,7 @@ import torch
 from torch._inductor.ir import ComputedBuffer, Reduction, Pointwise, Scatter, StorageBox
 import torch._inductor.lowering as lowering
 import torch._inductor.ir as ir
-from .ir import SpyreConstantFallback, SpyreEmptyFallback
+from .ir import SpyreConstantFallback, SpyreEmptyFallback, SpyreBroadcastFallback
 
 from typing import Any, Callable, Union
 
@@ -52,8 +52,14 @@ def register_spyre_lowering(
     type_promotion_kind=lowering.ELEMENTWISE_TYPE_PROMOTION_KIND.DEFAULT,
     override_return_dtype=None,
     convert_input_to_bool=False,
-    lowering_dict=spyre_lowerings,
+    lowering_dict=None,  # Changed: default to None, will use global lowering.lowerings,
 ):
+
+    # If no lowering_dict specified, use the global Inductor lowerings registry
+    # This ensures GraphLowering can find our lowerings
+    if lowering_dict is None:
+        lowering_dict = lowering.lowerings
+
     name = name or op.__name__
 
     ensure_default_handler(name)
@@ -759,4 +765,22 @@ def lower_empty(size, device, dtype=None):
     )
     return ir.TensorBox.create(
         SpyreEmptyFallback(op_overload, list(size), device, dtype)
+    )
+
+@register_spyre_lowering(torch.ops.spyre.broadcast.default)
+def lower_spyre_broadcast(x, src_rank=0, group_name="default"):
+    """
+    Lowering for spyre.broadcast - generates a fallback call to the broadcast operation.
+    
+    This creates an IR node that will emit a runtime call to torch.ops.spyre.broadcast,
+    which will execute the actual broadcast using spyre-comms.
+    """
+    x.realize()
+    return ir.TensorBox.create(
+        SpyreBroadcastFallback(
+            torch.ops.spyre.broadcast.default,
+            x,
+            src_rank,
+            group_name,
+        )
     )
