@@ -14,7 +14,6 @@ lib.define(
 # 1. Runtime kernel only receives eager tensors (no FunctionalTensor)
 # 2. Fake implementation is GUARANTEED to be called during torch.compile/AOT
 # 3. Op stays in graph for GraphLowering to handle
-print(f"[MODULE LOAD] Registering broadcast as custom_op with automatic functionalization")
 
 @torch.library.custom_op("spyre::broadcast", mutates_args=())
 def broadcast(x: torch.Tensor, src_rank: int = 0, group_name: str = "default") -> torch.Tensor:
@@ -24,13 +23,7 @@ def broadcast(x: torch.Tensor, src_rank: int = 0, group_name: str = "default") -
     generated code. It will NEVER receive FunctionalTensor wrappers.
     
     During compilation, the @register_fake implementation below is used instead.
-    """
-    print(f"\n{'='*80}")
-    print(f"[RUNTIME KERNEL] spyre.broadcast executing")
-    print(f"[RUNTIME KERNEL] x.device={x.device}, src_rank={src_rank}")
-    print(f"[RUNTIME KERNEL] x.shape={x.shape}, x.dtype={x.dtype}")
-    print(f"{'='*80}\n")
-    
+    """ 
     # Import here to avoid circular dependencies
     import spyre_comms
     import torch_spyre
@@ -43,9 +36,6 @@ def broadcast(x: torch.Tensor, src_rank: int = 0, group_name: str = "default") -
     
     # Get spyre-comms context
     ctx = spyre_comms.get_world_context()
-    rank = ctx.get_rank()
-    
-    print(f"[Rank {rank}] Performing broadcast using spyre-comms")
     
     # Ensure output tensor is contiguous
     if not out.is_contiguous():
@@ -77,8 +67,6 @@ def broadcast(x: torch.Tensor, src_rank: int = 0, group_name: str = "default") -
     work.start()
     work.wait()
     
-    print(f"[Rank {rank}] Broadcast completed successfully")
-    
     # Return the output tensor with broadcasted data
     return out
 
@@ -89,14 +77,6 @@ def _(x: torch.Tensor, src_rank: int = 0, group_name: str = "default") -> torch.
     This is GUARANTEED to be called during compilation instead of the runtime kernel.
     It provides shape/dtype metadata without executing the actual broadcast.
     """
-    print(f"\n{'='*80}")
-    print(f"[BROADCAST_FAKE] CALLED SUCCESSFULLY FOR SHAPE INFERENCE!")
-    print(f"[BROADCAST_FAKE] x.shape={x.shape}, x.dtype={x.dtype}, x.stride()={x.stride()}")
-    print(f"[BROADCAST_FAKE] x.device={x.device}, x.type={type(x).__name__}")
-    print(f"[BROADCAST_FAKE] Returning fake tensor with same metadata")
-    print(f"{'='*80}\n")
     # Return a tensor with the same shape, stride, dtype, and device
     # This tells AOT what the output will look like without actually broadcasting
     return torch.empty_strided(x.shape, x.stride(), dtype=x.dtype, device=x.device)
-
-print(f"[MODULE LOAD] custom_op broadcast registered with fake implementation")

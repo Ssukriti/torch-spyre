@@ -92,21 +92,12 @@ class SuperDSCScheduling(BaseScheduling):
         """
         Generate a kernel given a list of pre-fused nodes.
         """
-        print(f"[SPYRE SCHEDULER] codegen_node called with node type: {type(node)}")
-        if hasattr(node, 'node') and hasattr(node.node, 'target'):
-            print(f"[SPYRE SCHEDULER] Node target: {node.node.target}")
-        
         assert self.scheduler
         nodes = [
             node
             for node in node.get_nodes()
             if node.get_name() not in self.scheduler.removed_ops
         ]
-        
-        print(f"[SPYRE SCHEDULER] Processing {len(nodes)} nodes")
-        for n in nodes:
-            if hasattr(n, 'node') and hasattr(n.node, 'target'):
-                print(f"[SPYRE SCHEDULER] - Node: {n.node.target}")
         
         if len(nodes) == 0:
             return

@@ -137,19 +137,12 @@ def enable_spyre_lowerings():
                 fallback_ops, lowering.lowerings, allow_missing=True
             )
             saved_intree_lowerings = {}
-            print(f"[ENABLE_SPYRE_LOWERINGS] Registering {len(spyre_lowerings)} spyre lowerings")
-            print(f"[ENABLE_SPYRE_LOWERINGS] Looking for torch.ops.spyre.broadcast.default: {torch.ops.spyre.broadcast.default in spyre_lowerings}")
             for spyre_lowering_op, spyre_lowering_impl in spyre_lowerings.items():
-                # Debug: Print broadcast-related entries
-                if "broadcast" in str(spyre_lowering_op):
-                    print(f"[SPYRE LOWERING TABLE ENTRY] {spyre_lowering_op} -> {spyre_lowering_impl}")
-                
                 if spyre_lowering_op in lowering.lowerings:
                     saved_intree_lowerings[spyre_lowering_op] = lowering.lowerings[
                         spyre_lowering_op
                     ]
                 lowering.lowerings[spyre_lowering_op] = spyre_lowering_impl
-            print(f"[ENABLE_SPYRE_LOWERINGS] After registration, torch.ops.spyre.broadcast.default in lowering.lowerings: {torch.ops.spyre.broadcast.default in lowering.lowerings}")
 
             # Build adapters that call your Spyre lowering
             def _impl_lower_aten_clamp(x, min=None, max=None):
@@ -745,16 +738,8 @@ def lower_spyre_broadcast(x, src_rank=0, group_name="default"):
     This creates an IR node that will emit a runtime call to torch.ops.spyre.broadcast,
     which will execute the actual broadcast using spyre-comms.
     """
-    import traceback
-    print(f"\n{'='*80}")
-    print(f"[LOWERING] lower_spyre_broadcast CALLED!")
-    print(f"[LOWERING] x={x}, src_rank={src_rank}, group_name={group_name}")
-    print(f"[LOWERING] Call stack:")
-    traceback.print_stack()
-    print(f"{'='*80}\n")
-    
     x.realize()
-    result = ir.TensorBox.create(
+    return ir.TensorBox.create(
         SpyreBroadcastFallback(
             torch.ops.spyre.broadcast.default,
             x,
@@ -762,16 +747,3 @@ def lower_spyre_broadcast(x, src_rank=0, group_name="default"):
             group_name,
         )
     )
-    print(f"[LOWERING] Returning SpyreBroadcastFallback IR node: {result}")
-    return result
-
-# Print at module load time to confirm decorator ran
-print(f"[MODULE LOAD] Registered lowering for torch.ops.spyre.broadcast.default")
-print(f"[MODULE LOAD] Lowering function: {lower_spyre_broadcast}")
-print(f"[MODULE LOAD] Is in spyre_lowerings? {torch.ops.spyre.broadcast.default in spyre_lowerings}")
-
-# CRITICAL DEBUG: Check which registry actually has the lowering
-print(f"\n[MODULE LOAD DEBUG] Checking registries:")
-print(f"  1. spyre_lowerings[torch.ops.spyre.broadcast.default] = {spyre_lowerings.get(torch.ops.spyre.broadcast.default, 'NOT FOUND')}")
-print(f"  2. lowering.lowerings[torch.ops.spyre.broadcast.default] = {lowering.lowerings.get(torch.ops.spyre.broadcast.default, 'NOT FOUND')}")
-print(f"[MODULE LOAD DEBUG] If lowering.lowerings shows 'NOT FOUND', GraphLowering won't find it!\n")
