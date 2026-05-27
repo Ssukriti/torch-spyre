@@ -30,7 +30,7 @@ def run_demo():
         print(f"Rank {rank} (ROOT) - Initial tensor: {x[0, :4]}")
     else:
         x = torch.zeros(8, 8).to(device)
-        print(f"Rank {rank} - Initial tensor: {x[0, :4]}")
+        #print(f"Rank {rank} - Initial tensor: {x[0, :4]}")
 
     def fn(t):
         # Perform computation
@@ -44,12 +44,13 @@ def run_demo():
         z = y * 2
         return z
 
-    print(f"Rank {rank} - Compiling function...")
+    #print(f"Rank {rank} - Compiling function...")
     compiled_fn = torch.compile(fn)
 
     print(f"Rank {rank} - Executing broadcast...")
     out = compiled_fn(x)
 
+    print("\n")
     print(f"Rank {rank} - After broadcast: {out[0, :4]}")
     print(f"\n[Rank {rank}] Output shape: {out.shape}\n")
 

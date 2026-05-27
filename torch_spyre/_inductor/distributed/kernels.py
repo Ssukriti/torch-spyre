@@ -14,11 +14,9 @@ if not hasattr(torch, "_spyre_distributed_kernels_registered"):
     c10d_lib = Library("_c10d_functional", "IMPL", "AutogradPrivateUse1")
     
     def spyre_broadcast_passthrough(x, src_rank, group_name):
-        print("Spyre kernel placeholder for _c10d broadcast")
         return x
 
     def spyre_wait_tensor(x):
-        print("Spyre kernel placeholder for _c10d wait_tensor")
         return x
 
     c10d_lib.impl("broadcast", spyre_broadcast_passthrough)

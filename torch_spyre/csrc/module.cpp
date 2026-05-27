@@ -171,19 +171,6 @@ uintptr_t get_composite_address_ptr(const at::Tensor& tensor) {
   auto* composite_addr = &ctx->composite_addr;
   auto addr_value = reinterpret_cast<uintptr_t>(composite_addr);
   
-  // Debug logging
-  std::cout << "[C++] get_composite_address_ptr called" << std::endl;
-  std::cout << "[C++]   Tensor shape: [";
-  for (int i = 0; i < tensor.dim(); i++) {
-    std::cout << tensor.size(i);
-    if (i < tensor.dim() - 1) std::cout << ", ";
-  }
-  std::cout << "]" << std::endl;
-  std::cout << "[C++]   Tensor numel: " << tensor.numel() << std::endl;
-  std::cout << "[C++]   Tensor nbytes: " << tensor.nbytes() << std::endl;
-  std::cout << "[C++]   CompositeAddress ptr: 0x" << std::hex << addr_value << std::dec << std::endl;
-  std::cout << "[C++]   CompositeAddress chunks: " << composite_addr->chunks().size() << std::endl;
-  
   // Return the address of the CompositeAddress as an integer
   return addr_value;
 }

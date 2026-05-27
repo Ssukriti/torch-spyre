@@ -2,8 +2,20 @@ import torch
 import torch.fx as fx
 
 
+def _get_rank():
+    """Get current rank, return 0 if not in distributed context."""
+    try:
+        import torch.distributed as dist
+        if dist.is_initialized():
+            return dist.get_rank()
+    except Exception:
+        pass
+    return 0
+
+
 def lower_collectives(gm: fx.GraphModule):
     graph = gm.graph
+    rank = _get_rank()
 
     for node in list(graph.nodes):
         if node.op != "call_function":
@@ -18,10 +30,12 @@ def lower_collectives(gm: fx.GraphModule):
                 if u.op == "call_function"
                 and u.target == torch.ops._c10d_functional.wait_tensor
             ]
-            print("\n=== FX GRAPH BEFORE LOWERING ===")
-            print(graph)
-
-            print(">> Lowering _c10d_functional.broadcast + wait_tensor → spyre.broadcast")
+            
+            if rank == 0:
+                print("\n=== FX GRAPH BEFORE LOWERING ===")
+                print(graph)
+                print("\n=== FX GRAPH LOWERING ===")
+                print(">> Lowering _c10d_functional.broadcast + wait_tensor → spyre.broadcast")
 
             with graph.inserting_after(broadcast_node):
                 new_node = graph.call_function(
@@ -39,8 +53,9 @@ def lower_collectives(gm: fx.GraphModule):
 
             graph.erase_node(broadcast_node)
 
-            print("\n=== FX GRAPH AFTER LOWERING ===")
-            print(graph)
+            if rank == 0:
+                print("\n=== FX GRAPH AFTER LOWERING ===")
+                print(graph)
 
     graph.lint()
     gm.recompile()

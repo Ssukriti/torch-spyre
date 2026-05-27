@@ -191,7 +191,7 @@ class SpyreBroadcastFallback(ir.ExternKernel):
 
     def codegen(self, wrapper: PythonWrapperCodegen) -> None:
         """Generate code to call torch.ops.spyre.broadcast at runtime."""
-        print(f"[CODEGEN] SpyreBroadcastFallback.codegen called for {self.get_name()}")
+        print(f"\n======SpyreBroadcastFallback.codegen called======")
         
         # Get input tensor name
         input_tensor = self.inputs[0]
