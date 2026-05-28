@@ -1,6 +1,4 @@
 import os
-# Disable precompiled headers to avoid openssl dependency
-os.environ.setdefault("TORCHINDUCTOR_CPP_WRAPPER_PRECOMPILE_HEADERS", "0")
 
 import torch
 import torch.distributed as dist
@@ -18,10 +16,6 @@ def run_demo():
     print(f"Rank {rank}/{world_size} using device {device}")
 
     c10d._register_process_group("default", dist.group.WORLD)
-
-    # Initialize spyre-comms library
-    import spyre_comms
-    spyre_comms.initialize_library()
 
     # Create tensor - must be at least 128 bytes for spyre-comms
     # Using 8x8 float32 = 256 bytes (meets minimum requirement)
@@ -53,9 +47,6 @@ def run_demo():
     print("\n")
     print(f"Rank {rank} - After broadcast: {out[0, :4]}")
     print(f"\n[Rank {rank}] Output shape: {out.shape}\n")
-
-    # Cleanup
-    spyre_comms.finalize_library()
     
     if dist.is_initialized():
         dist.destroy_process_group()
