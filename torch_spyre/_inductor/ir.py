@@ -237,4 +237,120 @@ class SpyreBroadcastFallback(ir.ExternKernel):
         # Register this buffer and operation with the graph
         # Without these calls, the IR node is created but never scheduled/codegen'd
         self.name = V.graph.register_buffer(self)
+
+class SpyreBroadcastAsyncFallback(ir.ExternKernel):
+    """IR node for spyre.broadcast_async — starts async broadcast and returns handle.
+    
+    This generates a call to torch.ops.spyre.broadcast_async which:
+    1. Starts the broadcast operation (non-blocking)
+    2. Returns an integer handle to the WorkSchedule
+    
+    The handle is used later by SpyreWaitFallback to wait for completion.
+    """
+
+    def codegen(self, wrapper: PythonWrapperCodegen) -> None:
+        """Generate code to call torch.ops.spyre.broadcast_async at runtime."""
+        # Get input tensor name
+        input_tensor = self.inputs[0]
+        input_name = input_tensor.codegen_reference()
+
+        # Get constant args (src_rank)
+        src_rank = self.constant_args[0]
+
+        # Generate the call - returns an integer handle
+        output_name = self.get_name()
+        wrapper.writeline(
+            f"{output_name} = torch.ops.spyre.broadcast_async({input_name}, {src_rank})"
+        )
+
+    def should_allocate(self) -> bool:
+        # Return False - the op returns an integer handle, not a tensor
+        return False
+
+    def get_mutation_names(self) -> Sequence[str]:
+        return []
+
+    def get_unbacked_symbol_defs(self) -> OrderedSet[sympy.Symbol]:
+        return OrderedSet()
+
+    def __init__(
+        self,
+        op_overload: torch._ops.OpOverload,
+        x: IRNode,
+        src_rank: int,
+    ) -> None:
+        # broadcast_async returns an integer handle (SymInt)
+        # We use a scalar layout to represent this
+        from torch._inductor.ir import FixedLayout
+        layout = FixedLayout(
+            device=x.get_device(),
+            dtype=torch.int64,
+            size=[],  # Scalar
+            stride=[],
+        )
+        super().__init__(
+            None,
+            layout,
+            [x],
+            (src_rank,),
+            python_kernel_name="torch.ops.spyre.broadcast_async",
+            op_overload=op_overload,
+        )
+        # Register this buffer and operation with the graph
+        self.name = V.graph.register_buffer(self)
+        V.graph.register_operation(self)
+
+
+class SpyreWaitFallback(ir.ExternKernel):
+    """IR node for spyre.wait — waits for async operation to complete.
+    
+    This generates a call to torch.ops.spyre.wait which:
+    1. Takes a handle (from broadcast_async) and the original tensor
+    2. Blocks until the WorkSchedule completes
+    3. Returns the tensor with completed communication result
+    """
+
+    def codegen(self, wrapper: PythonWrapperCodegen) -> None:
+        """Generate code to call torch.ops.spyre.wait at runtime."""
+        # Get handle and tensor names
+        handle = self.inputs[0]
+        tensor = self.inputs[1]
+        handle_name = handle.codegen_reference()
+        tensor_name = tensor.codegen_reference()
+
+        # Generate the call
+        output_name = self.get_name()
+        wrapper.writeline(
+            f"{output_name} = torch.ops.spyre.wait({handle_name}, {tensor_name})"
+        )
+
+    def should_allocate(self) -> bool:
+        # Return False - the op returns the input tensor
+        return False
+
+    def get_mutation_names(self) -> Sequence[str]:
+        return []
+
+    def get_unbacked_symbol_defs(self) -> OrderedSet[sympy.Symbol]:
+        return OrderedSet()
+
+    def __init__(
+        self,
+        op_overload: torch._ops.OpOverload,
+        handle: IRNode,
+        tensor: IRNode,
+    ) -> None:
+        # wait returns a tensor with the same layout as input
+        layout = tensor.get_layout()
+        super().__init__(
+            None,
+            layout,
+            [handle, tensor],
+            (),
+            python_kernel_name="torch.ops.spyre.wait",
+            op_overload=op_overload,
+        )
+        # Register this buffer and operation with the graph
+        self.name = V.graph.register_buffer(self)
+        V.graph.register_operation(self)
         V.graph.register_operation(self)

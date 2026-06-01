@@ -20,7 +20,13 @@ import torch
 from torch._inductor.ir import ComputedBuffer, Reduction, Pointwise, Scatter, StorageBox
 import torch._inductor.lowering as lowering
 import torch._inductor.ir as ir
-from .ir import SpyreConstantFallback, SpyreEmptyFallback, SpyreBroadcastFallback
+from .ir import (
+    SpyreConstantFallback,
+    SpyreEmptyFallback,
+    SpyreBroadcastFallback,
+    SpyreBroadcastAsyncFallback,
+    SpyreWaitFallback,
+)
 
 from typing import Any, Callable, Union
 
@@ -782,5 +788,42 @@ def lower_spyre_broadcast(x, src_rank=0, group_name="default"):
             x,
             src_rank,
             group_name,
+        )
+    )
+
+
+@register_spyre_lowering(torch.ops.spyre.broadcast_async.default)
+def lower_spyre_broadcast_async(x, src_rank=0):
+    """
+    Lowering for spyre.broadcast_async - starts async broadcast and returns handle.
+    
+    This creates an IR node that will emit a runtime call to torch.ops.spyre.broadcast_async,
+    which starts the broadcast operation (non-blocking) and returns an integer handle.
+    """
+    x.realize()
+    return ir.TensorBox.create(
+        SpyreBroadcastAsyncFallback(
+            torch.ops.spyre.broadcast_async.default,
+            x,
+            src_rank,
+        )
+    )
+
+
+@register_spyre_lowering(torch.ops.spyre.wait.default)
+def lower_spyre_wait(handle, tensor):
+    """
+    Lowering for spyre.wait - waits for async operation to complete.
+    
+    This creates an IR node that will emit a runtime call to torch.ops.spyre.wait,
+    which blocks until the WorkSchedule (identified by handle) completes.
+    """
+    handle.realize()
+    tensor.realize()
+    return ir.TensorBox.create(
+        SpyreWaitFallback(
+            torch.ops.spyre.wait.default,
+            handle,
+            tensor,
         )
     )
