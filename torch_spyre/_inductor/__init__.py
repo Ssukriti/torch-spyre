@@ -18,7 +18,6 @@ from . import config
 
 import threading
 from functools import wraps
-from torch_spyre._inductor.distributed import lower_collectives
 
 from .propagate_hints import spyre_hint, get_op_hints  # noqa: F401
 
@@ -110,9 +109,6 @@ def enable_spyre_compile_fx_wrapper():
                     # and yielded as `spyre_context_decompositions` from the CM
 
                     kwargs["decompositions"] = spyre_context_decompositions
-
-                    # Apply Spyre collective lowering (converts c10d ops to spyre ops)
-                    gm = lower_collectives(gm)
 
                     return _orig(
                         gm,

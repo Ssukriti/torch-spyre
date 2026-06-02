@@ -55,44 +55,71 @@ def run_demo():
 if __name__ == "__main__":
     run_demo()
 
-
 """
-## To run
-torchrun --nproc-per-node=2 examples/broadcast_demo_multirank.py
-
-## Expected FX graph lowering
-[Gloo] Rank 0 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+[1000840000@sukriti-2-dev torch-spyre]$ torchrun --nproc-per-node=2 examples/broadcast_demo_multirank.py
 [Gloo] Rank 1 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+[Gloo] Rank 0 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
 Rank 1/2 using device spyre
 Rank 0/2 using device spyre
 Rank 1 - Executing broadcast...
-======SpyreBroadcastFallback.codegen called======
-[CODEGEN] Generated: buf1 = torch.ops.spyre.broadcast(buf0, 0, 'default')
+
+======================================================================
+[DIRECT LOWERING] _c10d_functional.broadcast
+  → Creating SpyreBroadcastFallback IR node
+  → src_rank=0, group_name='default'
+  → Will generate: torch.ops.spyre.broadcast(tensor, 0, 'default')
+======================================================================
+
+[DIRECT LOWERING] _c10d_functional.wait_tensor → No-op (synchronous broadcast)
+
+======================================================================
+[IR CODEGEN] SpyreBroadcastFallback.codegen()
+======================================================================
+  Input tensor: buf0
+  src_rank: 0
+  group_name: 'default'
+
+  Generated code:
+    buf1 = torch.ops.spyre.broadcast(buf0, 0, 'default')
+
+  This will dispatch to C++ spyre_broadcast_impl() at runtime
+======================================================================
+
 Rank 0 (ROOT) - Initial tensor: tensor([42., 42., 42., 42.], device='spyre:0')
 Rank 0 - Executing broadcast...
-=== FX GRAPH BEFORE LOWERING ===
-graph():
-    %l_t_ : torch.Tensor [num_users=1] = placeholder[target=L_t_]
-    %y : [num_users=1] = call_function[target=operator.add](args = (%l_t_, %l_t_), kwargs = {})
-    %y_1 : [num_users=1] = call_function[target=torch.ops._c10d_functional.broadcast](args = (%y, 0, default), kwargs = {})
-    %y_2 : [num_users=1] = call_function[target=torch.ops._c10d_functional.wait_tensor](args = (%y_1,), kwargs = {})
-    %z : [num_users=1] = call_function[target=operator.mul](args = (%y_2, 2), kwargs = {})
-    return (z,)
-=== FX GRAPH LOWERING ===
->> Lowering _c10d_functional.broadcast + wait_tensor → spyre.broadcast
-=== FX GRAPH AFTER LOWERING ===
-graph():
-    %l_t_ : torch.Tensor [num_users=1] = placeholder[target=L_t_]
-    %y : [num_users=1] = call_function[target=operator.add](args = (%l_t_, %l_t_), kwargs = {})
-    %broadcast_default : [num_users=1] = call_function[target=torch.ops.spyre.broadcast.default](args = (%y, 0, default), kwargs = {})
-    %z : [num_users=1] = call_function[target=operator.mul](args = (%broadcast_default, 2), kwargs = {})
-    return (z,)
-======SpyreBroadcastFallback.codegen called======
-[CODEGEN] Generated: buf1 = torch.ops.spyre.broadcast(buf0, 0, 'default')
+
+======================================================================
+[DIRECT LOWERING] _c10d_functional.broadcast
+  → Creating SpyreBroadcastFallback IR node
+  → src_rank=0, group_name='default'
+  → Will generate: torch.ops.spyre.broadcast(tensor, 0, 'default')
+======================================================================
+
+[DIRECT LOWERING] _c10d_functional.wait_tensor → No-op (synchronous broadcast)
+
+======================================================================
+[IR CODEGEN] SpyreBroadcastFallback.codegen()
+======================================================================
+  Input tensor: buf0
+  src_rank: 0
+  group_name: 'default'
+
+  Generated code:
+    buf1 = torch.ops.spyre.broadcast(buf0, 0, 'default')
+
+  This will dispatch to C++ spyre_broadcast_impl() at runtime
+======================================================================
+
+
+
 Rank 1 - After broadcast: tensor([168., 168., 168., 168.], device='spyre:0')
+
 [Rank 1] Output shape: torch.Size([8, 8])
+
+
+
 Rank 0 - After broadcast: tensor([168., 168., 168., 168.], device='spyre:0')
+
 [Rank 0] Output shape: torch.Size([8, 8])
 """
-
 # Made with Bob

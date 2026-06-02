@@ -20,7 +20,11 @@ import torch
 from torch._inductor.ir import ComputedBuffer, Reduction, Pointwise, Scatter, StorageBox
 import torch._inductor.lowering as lowering
 import torch._inductor.ir as ir
-from .ir import SpyreConstantFallback, SpyreEmptyFallback, SpyreBroadcastFallback
+from .ir import (
+    SpyreConstantFallback,
+    SpyreEmptyFallback,
+    SpyreBroadcastFallback,
+)
 
 from typing import Any, Callable, Union
 
@@ -767,20 +771,59 @@ def lower_empty(size, device, dtype=None):
         SpyreEmptyFallback(op_overload, list(size), device, dtype)
     )
 
-@register_spyre_lowering(torch.ops.spyre.broadcast.default)
-def lower_spyre_broadcast(x, src_rank=0, group_name="default"):
+# ============================================================================
+# Direct c10d Lowerings (Cleaner Architecture)
+# ============================================================================
+# Register lowerings directly for c10d ops, bypassing FX pass and custom ops.
+# Still uses C++ implementation for performance.
+#
+# Architecture:
+#   _c10d_functional.broadcast → Lowering → IR node → C++ → spyre-comms
+#
+# Removes:
+#   - FX pass transformation
+#   - Custom op registration (spyre.broadcast)
+#
+# Keeps:
+#   - C++ implementation (performance)
+#   - Existing IR nodes (SpyreBroadcastFallback)
+
+@register_spyre_lowering(torch.ops._c10d_functional.broadcast.default)
+def lower_c10d_broadcast_direct(tensor, src_rank, group_name):
     """
-    Lowering for spyre.broadcast - generates a fallback call to the broadcast operation.
+    Direct lowering for _c10d_functional.broadcast.
     
-    This creates an IR node that will emit a runtime call to torch.ops.spyre.broadcast,
-    which will execute the actual broadcast using spyre-comms.
+    Bypasses FX pass and custom op, but still uses C++ implementation.
+    
+    Flow:
+      _c10d_functional.broadcast → This lowering → SpyreBroadcastFallback
+      → Generated code: torch.ops.spyre.broadcast() → C++ → spyre-comms
     """
-    x.realize()
+    print(f"\n{'='*70}")
+    print(f"[DIRECT LOWERING] _c10d_functional.broadcast")
+    print(f"  → Creating SpyreBroadcastFallback IR node")
+    print(f"  → src_rank={src_rank}, group_name='{group_name}'")
+    print(f"  → Will generate: torch.ops.spyre.broadcast(tensor, {src_rank}, '{group_name}')")
+    print(f"{'='*70}\n")
+    
+    tensor.realize()
     return ir.TensorBox.create(
         SpyreBroadcastFallback(
             torch.ops.spyre.broadcast.default,
-            x,
+            tensor,
             src_rank,
             group_name,
         )
     )
+
+
+@register_spyre_lowering(torch.ops._c10d_functional.wait_tensor.default)
+def lower_c10d_wait_tensor_direct(tensor):
+    """
+    Direct lowering for _c10d_functional.wait_tensor.
+    
+    For synchronous collectives, this is a no-op (pass-through).
+    """
+    print(f"[DIRECT LOWERING] _c10d_functional.wait_tensor → No-op (synchronous broadcast)")
+    tensor.realize()
+    return tensor  # No-op for sync collectives

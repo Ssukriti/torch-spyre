@@ -191,7 +191,9 @@ class SpyreBroadcastFallback(ir.ExternKernel):
 
     def codegen(self, wrapper: PythonWrapperCodegen) -> None:
         """Generate code to call torch.ops.spyre.broadcast at runtime."""
-        print(f"\n======SpyreBroadcastFallback.codegen called======")
+        print(f"\n{'='*70}")
+        print(f"[IR CODEGEN] SpyreBroadcastFallback.codegen()")
+        print(f"{'='*70}")
 
         # Get input tensor name
         input_tensor = self.inputs[0]
@@ -200,12 +202,20 @@ class SpyreBroadcastFallback(ir.ExternKernel):
         # Get constant args (src_rank, group_name)
         src_rank, group_name = self.constant_args
 
+        print(f"  Input tensor: {input_name}")
+        print(f"  src_rank: {src_rank}")
+        print(f"  group_name: '{group_name}'")
+
         # Generate the call using wrapper.writeline (same pattern as SpyreConstantFallback)
         output_name = self.get_name()
-        wrapper.writeline(
-            f"{output_name} = torch.ops.spyre.broadcast({input_name}, {src_rank}, '{group_name}')"
-        )
-        print(f"[CODEGEN] Generated: {output_name} = torch.ops.spyre.broadcast({input_name}, {src_rank}, '{group_name}')")
+        generated_code = f"{output_name} = torch.ops.spyre.broadcast({input_name}, {src_rank}, '{group_name}')"
+        
+        print(f"\n  Generated code:")
+        print(f"    {generated_code}")
+        print(f"\n  This will dispatch to C++ spyre_broadcast_impl() at runtime")
+        print(f"{'='*70}\n")
+        
+        wrapper.writeline(generated_code)
 
     def should_allocate(self) -> bool:
         # Return False - the op returns a new tensor

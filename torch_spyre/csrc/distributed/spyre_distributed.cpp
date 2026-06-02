@@ -26,9 +26,9 @@
 #include <string>
 #include <vector>
 
-#include "logging.h"
-#include "spyre_allocator.h"
-#include "spyre_tensor_impl.h"
+#include "../logging.h"
+#include "../spyre_allocator.h"
+#include "../spyre_tensor_impl.h"
 
 namespace spyre {
 
@@ -143,11 +143,16 @@ at::Tensor spyre_broadcast_impl(
   return output;
 }
 
-// Register the implementation with PyTorch's dispatcher
-TORCH_LIBRARY_IMPL(spyre, PrivateUse1, m) {
-  m.impl("broadcast", &spyre_broadcast_impl);
+}  // namespace spyre
+
+// Define the spyre namespace and broadcast operation
+TORCH_LIBRARY(spyre, m) {
+  m.def("broadcast(Tensor input, int src_rank, str group_name) -> Tensor");
 }
 
-}  // namespace spyre
+// Register the implementation with PyTorch's dispatcher
+TORCH_LIBRARY_IMPL(spyre, PrivateUse1, m) {
+  m.impl("broadcast", &spyre::spyre_broadcast_impl);
+}
 
 // Made with Bob
