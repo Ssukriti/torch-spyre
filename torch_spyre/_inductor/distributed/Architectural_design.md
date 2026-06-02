@@ -15,14 +15,17 @@ Keep collectives inside the Torch-Spyre compilation flow and route them through 
 
 Instead of:
 
+```
 FX Graph
    ↓
 c10d Functional Collective
    ↓
 Fallback / external communication path
+```
 
 we now have:
 
+```
 FX Graph
    ↓
 Spyre Collective Op
@@ -32,6 +35,7 @@ Torch-Spyre Compilation
 C++ Dispatcher
    ↓
 spyre-comms
+```
 
 ## What Was Implemented
 1. Functional Collective Recognition
@@ -40,20 +44,24 @@ Intercept functional collective operations in the FX graph.
 
 Example:
 
+```
 _c10d_functional.broadcast
 wait_tensor
+```
 
 are replaced with:
 
+```
 spyre::broadcast
+```
 
 2. Compiler Compatibility
 
 Custom Spyre collectives remain visible during:
 
-FX graph transformations
-AOT Autograd tracing
-Inductor compilation
+- FX graph transformations
+- AOT Autograd tracing
+- Inductor compilation
 
 through custom op registration and fake/meta implementations.
 
@@ -63,11 +71,13 @@ This allows collectives to survive the compilation pipeline rather than being re
 
 Lowered collectives are dispatched through:
 
+```
 Torch-Spyre
    ↓
 C++ Dispatcher
    ↓
 spyre-comms API
+```
 
 allowing execution on the native Spyre communication stack.
 
@@ -80,12 +90,13 @@ Communication no longer needs to be treated as an opaque operation outside the c
 
 Torch-Spyre and spyre-comms can be connected through a clean lowering boundary:
 
+```
 FX Graph
    ↓
 Torch-Spyre Lowering
    ↓
 spyre-comms
-
+```
 This validates the overall architecture for future collective support.
 
 This is the prerequisite for future work around:
