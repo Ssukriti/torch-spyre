@@ -182,17 +182,17 @@ class SpyreEmptyFallback(ir.ExternKernel):
         self.name = V.graph.register_buffer(self)
         V.graph.register_operation(self)
 
-class SpyreBroadcastFallback(ir.ExternKernel):
-    """IR node for spyre.broadcast — emits a runtime call to the broadcast operation.
+class SpyreBroadcastAsyncFallback(ir.ExternKernel):
+    """IR node for spyre.broadcast_async — emits a runtime call to async broadcast.
     
-    This is a fallback that generates a call to torch.ops.spyre.broadcast at runtime.
-    The operation takes an input tensor and broadcasts it from src_rank to all ranks.
+    This starts the broadcast operation asynchronously and returns immediately,
+    allowing computation to proceed while communication is in progress.
     """
 
     def codegen(self, wrapper: PythonWrapperCodegen) -> None:
-        """Generate code to call torch.ops.spyre.broadcast at runtime."""
+        """Generate code to call torch.ops.spyre.broadcast_async at runtime."""
         print(f"\n{'='*70}")
-        print(f"[IR CODEGEN] SpyreBroadcastFallback.codegen()")
+        print(f"[IR CODEGEN] SpyreBroadcastAsyncFallback.codegen()")
         print(f"{'='*70}")
 
         # Get input tensor name
@@ -206,19 +206,19 @@ class SpyreBroadcastFallback(ir.ExternKernel):
         print(f"  src_rank: {src_rank}")
         print(f"  group_name: '{group_name}'")
 
-        # Generate the call using wrapper.writeline (same pattern as SpyreConstantFallback)
+        # Generate the async call
         output_name = self.get_name()
-        generated_code = f"{output_name} = torch.ops.spyre.broadcast({input_name}, {src_rank}, '{group_name}')"
+        generated_code = f"{output_name} = torch.ops.spyre.broadcast_async({input_name}, {src_rank}, '{group_name}')"
         
         print(f"\n  Generated code:")
         print(f"    {generated_code}")
-        print(f"\n  This will dispatch to C++ spyre_broadcast_impl() at runtime")
+        print(f"\n  This will dispatch to C++ spyre_broadcast_async_impl() at runtime")
+        print(f"  Communication starts immediately, returns without blocking")
         print(f"{'='*70}\n")
         
         wrapper.writeline(generated_code)
 
     def should_allocate(self) -> bool:
-        # Return False - the op returns a new tensor
         return False
 
     def get_mutation_names(self) -> Sequence[str]:
@@ -234,17 +234,73 @@ class SpyreBroadcastFallback(ir.ExternKernel):
         src_rank: int,
         group_name: str,
     ) -> None:
-        # Broadcast returns a tensor with the same layout as input
+        # Async broadcast returns a tensor with the same layout as input
         layout = x.get_layout()
         super().__init__(
             None,
             layout,
             [x],
             (src_rank, group_name),
-            python_kernel_name="torch.ops.spyre.broadcast",
+            python_kernel_name="torch.ops.spyre.broadcast_async",
             op_overload=op_overload,
         )
-        # Register this buffer and operation with the graph
-        # Without these calls, the IR node is created but never scheduled/codegen'd
+        self.name = V.graph.register_buffer(self)
+        V.graph.register_operation(self)
+
+
+class SpyreWaitWorkFallback(ir.ExternKernel):
+    """IR node for spyre.wait_work — emits a runtime call to synchronize async operation.
+    
+    This blocks until the async broadcast operation completes.
+    """
+
+    def codegen(self, wrapper: PythonWrapperCodegen) -> None:
+        """Generate code to call torch.ops.spyre.wait_work at runtime."""
+        print(f"\n{'='*70}")
+        print(f"[IR CODEGEN] SpyreWaitWorkFallback.codegen()")
+        print(f"{'='*70}")
+
+        # Get input tensor name (the tensor from broadcast_async)
+        input_tensor = self.inputs[0]
+        input_name = input_tensor.codegen_reference()
+
+        print(f"  Input tensor: {input_name}")
+
+        # Generate the wait call
+        output_name = self.get_name()
+        generated_code = f"{output_name} = torch.ops.spyre.wait_work({input_name})"
+        
+        print(f"\n  Generated code:")
+        print(f"    {generated_code}")
+        print(f"\n  This will dispatch to C++ spyre_wait_work_impl() at runtime")
+        print(f"  Blocks until async broadcast completes")
+        print(f"{'='*70}\n")
+        
+        wrapper.writeline(generated_code)
+
+    def should_allocate(self) -> bool:
+        return False
+
+    def get_mutation_names(self) -> Sequence[str]:
+        return []
+
+    def get_unbacked_symbol_defs(self) -> OrderedSet[sympy.Symbol]:
+        return OrderedSet()
+
+    def __init__(
+        self,
+        op_overload: torch._ops.OpOverload,
+        x: IRNode,
+    ) -> None:
+        # Wait returns the same tensor (pass-through)
+        layout = x.get_layout()
+        super().__init__(
+            None,
+            layout,
+            [x],
+            (),  # No constant args
+            python_kernel_name="torch.ops.spyre.wait_work",
+            op_overload=op_overload,
+        )
         self.name = V.graph.register_buffer(self)
         V.graph.register_operation(self)

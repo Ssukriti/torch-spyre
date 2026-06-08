@@ -26,26 +26,34 @@ def run_demo():
         x = torch.zeros(8, 8).to(device)
         #print(f"Rank {rank} - Initial tensor: {x[0, :4]}")
 
-    def fn(t):
-        # Perform computation
+    independent = torch.ones(8, 8).to(device) * 10.0
+
+    def fn(t, ind):
+        # Pre-broadcast computation
         y = t + t
         
-        # Broadcast from root rank - this will be lowered to spyre.broadcast
-        y = torch.ops._c10d_functional.broadcast(y, root_rank, "default")
-        y = torch.ops._c10d_functional.wait_tensor(y)
+        # Broadcast from root rank - lowered to broadcast_async
+        y_bcast = torch.ops._c10d_functional.broadcast(y, root_rank, "default")
         
-        # Continue computation
-        z = y * 2
+        # Independent computation (compiler in future can schedule this to overlap with broadcast)
+        ind_result = ind * ind * ind  # 10^3 = 1000
+        
+        # Wait for broadcast to complete
+        y_ready = torch.ops._c10d_functional.wait_tensor(y_bcast)
+        
+        # Combine results: (42*2)*2 + 1000 = 168 + 1000 = 1168
+        z = y_ready * 2 + ind_result
         return z
 
-    #print(f"Rank {rank} - Compiling function...")
+    print(f"Rank {rank} - Compiling function...")
     compiled_fn = torch.compile(fn)
 
-    print(f"Rank {rank} - Executing broadcast...")
-    out = compiled_fn(x)
+    print(f"Rank {rank} - Executing broadcast")
+    out = compiled_fn(x, independent)
 
     print("\n")
     print(f"Rank {rank} - After broadcast: {out[0, :4]}")
+    print(f"Rank {rank} - Expected: 1168.0 = (42*2)*2 + 10^3")
     print(f"\n[Rank {rank}] Output shape: {out.shape}\n")
     
     if dist.is_initialized():
@@ -56,69 +64,115 @@ if __name__ == "__main__":
     run_demo()
 
 """
-[1000840000@sukriti-2-dev torch-spyre]$ torchrun --nproc-per-node=2 examples/broadcast_demo_multirank.py
-[Gloo] Rank 1 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
-[Gloo] Rank 0 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
-Rank 1/2 using device spyre
-Rank 0/2 using device spyre
-Rank 1 - Executing broadcast...
-
-======================================================================
-[DIRECT LOWERING] _c10d_functional.broadcast
-  → Creating SpyreBroadcastFallback IR node
-  → src_rank=0, group_name='default'
-  → Will generate: torch.ops.spyre.broadcast(tensor, 0, 'default')
-======================================================================
-
-[DIRECT LOWERING] _c10d_functional.wait_tensor → No-op (synchronous broadcast)
-
-======================================================================
-[IR CODEGEN] SpyreBroadcastFallback.codegen()
-======================================================================
-  Input tensor: buf0
-  src_rank: 0
-  group_name: 'default'
-
-  Generated code:
-    buf1 = torch.ops.spyre.broadcast(buf0, 0, 'default')
-
-  This will dispatch to C++ spyre_broadcast_impl() at runtime
-======================================================================
+[Gloo] Rank [Gloo] Rank 1 is connected to 1 peer ranks. 0Expected number of connected peer ranks is :  is connected to 11
+ peer ranks. Expected number of connected peer ranks is : 1
+Rank 1/2 using device spyreRank 0/2 using device spyre
 
 Rank 0 (ROOT) - Initial tensor: tensor([42., 42., 42., 42.], device='spyre:0')
-Rank 0 - Executing broadcast...
-
+Rank 1 - Compiling function...
+Rank 1 - Executing broadcast
 ======================================================================
-[DIRECT LOWERING] _c10d_functional.broadcast
-  → Creating SpyreBroadcastFallback IR node
+[ASYNC LOWERING] _c10d_functional.broadcast
+  → Creating SpyreBroadcastAsyncFallback IR node
   → src_rank=0, group_name='default'
-  → Will generate: torch.ops.spyre.broadcast(tensor, 0, 'default')
+  → Will generate: torch.ops.spyre.broadcast_async(tensor, 0, 'default')
+  → Communication starts immediately, returns without waiting
 ======================================================================
 
-[DIRECT LOWERING] _c10d_functional.wait_tensor → No-op (synchronous broadcast)
 
 ======================================================================
-[IR CODEGEN] SpyreBroadcastFallback.codegen()
+[ASYNC LOWERING] _c10d_functional.wait_tensor
+  → Creating SpyreWaitWorkFallback IR node
+  → Will generate: torch.ops.spyre.wait_work(tensor)
+  → Blocks until async broadcast completes
+======================================================================
+
+
+======================================================================
+[IR CODEGEN] SpyreBroadcastAsyncFallback.codegen()
 ======================================================================
   Input tensor: buf0
   src_rank: 0
   group_name: 'default'
 
   Generated code:
-    buf1 = torch.ops.spyre.broadcast(buf0, 0, 'default')
+    buf1 = torch.ops.spyre.broadcast_async(buf0, 0, 'default')
 
-  This will dispatch to C++ spyre_broadcast_impl() at runtime
+  This will dispatch to C++ spyre_broadcast_async_impl() at runtime
+  Communication starts immediately, returns without blocking
+======================================================================
+
+
+======================================================================
+[IR CODEGEN] SpyreWaitWorkFallback.codegen()
+======================================================================
+  Input tensor: buf1
+
+  Generated code:
+    buf2 = torch.ops.spyre.wait_work(buf1)
+
+  This will dispatch to C++ spyre_wait_work_impl() at runtime
+  Blocks until async broadcast completes
+======================================================================
+
+Rank 0 - Compiling function...
+Rank 0 - Executing broadcast
+
+======================================================================
+[ASYNC LOWERING] _c10d_functional.broadcast
+  → Creating SpyreBroadcastAsyncFallback IR node
+  → src_rank=0, group_name='default'
+  → Will generate: torch.ops.spyre.broadcast_async(tensor, 0, 'default')
+  → Communication starts immediately, returns without waiting
+======================================================================
+
+
+======================================================================
+[ASYNC LOWERING] _c10d_functional.wait_tensor
+  → Creating SpyreWaitWorkFallback IR node
+  → Will generate: torch.ops.spyre.wait_work(tensor)
+  → Blocks until async broadcast completes
+======================================================================
+
+
+======================================================================
+[IR CODEGEN] SpyreBroadcastAsyncFallback.codegen()
+======================================================================
+  Input tensor: buf0
+  src_rank: 0
+  group_name: 'default'
+
+  Generated code:
+    buf1 = torch.ops.spyre.broadcast_async(buf0, 0, 'default')
+
+  This will dispatch to C++ spyre_broadcast_async_impl() at runtime
+  Communication starts immediately, returns without blocking
+======================================================================
+
+
+======================================================================
+[IR CODEGEN] SpyreWaitWorkFallback.codegen()
+======================================================================
+  Input tensor: buf1
+
+  Generated code:
+    buf2 = torch.ops.spyre.wait_work(buf1)
+
+  This will dispatch to C++ spyre_wait_work_impl() at runtime
+  Blocks until async broadcast completes
 ======================================================================
 
 
 
-Rank 1 - After broadcast: tensor([168., 168., 168., 168.], device='spyre:0')
+Rank 1 - After broadcast: tensor([1168., 1168., 1168., 1168.], device='spyre:0')
+Rank 1 - Expected: 1168.0 = (42*2)*2 + 10^3
 
 [Rank 1] Output shape: torch.Size([8, 8])
 
 
 
-Rank 0 - After broadcast: tensor([168., 168., 168., 168.], device='spyre:0')
+Rank 0 - After broadcast: tensor([1168., 1168., 1168., 1168.], device='spyre:0')
+Rank 0 - Expected: 1168.0 = (42*2)*2 + 10^3
 
 [Rank 0] Output shape: torch.Size([8, 8])
 """

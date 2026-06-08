@@ -23,7 +23,8 @@ import torch._inductor.ir as ir
 from .ir import (
     SpyreConstantFallback,
     SpyreEmptyFallback,
-    SpyreBroadcastFallback,
+    SpyreBroadcastAsyncFallback,
+    SpyreWaitWorkFallback
 )
 
 from typing import Any, Callable, Union
@@ -779,37 +780,31 @@ def lower_empty(size, device, dtype=None):
 #
 # Architecture:
 #   _c10d_functional.broadcast → Lowering → IR node → C++ → spyre-comms
-#
-# Removes:
-#   - FX pass transformation
-#   - Custom op registration (spyre.broadcast)
-#
-# Keeps:
-#   - C++ implementation (performance)
-#   - Existing IR nodes (SpyreBroadcastFallback)
-
 @register_spyre_lowering(torch.ops._c10d_functional.broadcast.default)
-def lower_c10d_broadcast_direct(tensor, src_rank, group_name):
+def lower_c10d_broadcast_async(tensor, src_rank, group_name):
     """
-    Direct lowering for _c10d_functional.broadcast.
+    Direct lowering for _c10d_functional.broadcast using ASYNC pattern.
     
-    Bypasses FX pass and custom op, but still uses C++ implementation.
+    Creates an async broadcast operation that returns immediately without blocking.
+    This provides the infrastructure for potential communication-compute overlap,
+    though actual overlap depends on scheduler decisions.
     
     Flow:
-      _c10d_functional.broadcast → This lowering → SpyreBroadcastFallback
-      → Generated code: torch.ops.spyre.broadcast() → C++ → spyre-comms
+      _c10d_functional.broadcast → This lowering → SpyreBroadcastAsyncFallback
+      → Generated code: torch.ops.spyre.broadcast_async() → C++ → spyre-comms (non-blocking)
     """
     print(f"\n{'='*70}")
-    print(f"[DIRECT LOWERING] _c10d_functional.broadcast")
-    print(f"  → Creating SpyreBroadcastFallback IR node")
+    print(f"[ASYNC LOWERING] _c10d_functional.broadcast")
+    print(f"  → Creating SpyreBroadcastAsyncFallback IR node")
     print(f"  → src_rank={src_rank}, group_name='{group_name}'")
-    print(f"  → Will generate: torch.ops.spyre.broadcast(tensor, {src_rank}, '{group_name}')")
+    print(f"  → Will generate: torch.ops.spyre.broadcast_async(tensor, {src_rank}, '{group_name}')")
+    print(f"  → Communication starts immediately, returns without waiting")
     print(f"{'='*70}\n")
     
     tensor.realize()
     return ir.TensorBox.create(
-        SpyreBroadcastFallback(
-            torch.ops.spyre.broadcast.default,
+        SpyreBroadcastAsyncFallback(
+            torch.ops.spyre.broadcast_async.default,
             tensor,
             src_rank,
             group_name,
@@ -818,12 +813,27 @@ def lower_c10d_broadcast_direct(tensor, src_rank, group_name):
 
 
 @register_spyre_lowering(torch.ops._c10d_functional.wait_tensor.default)
-def lower_c10d_wait_tensor_direct(tensor):
+def lower_c10d_wait_tensor_async(tensor):
     """
-    Direct lowering for _c10d_functional.wait_tensor.
+    Direct lowering for _c10d_functional.wait_tensor using ASYNC pattern.
     
-    For synchronous collectives, this is a no-op (pass-through).
+    Synchronizes on the async broadcast operation, blocking until communication completes.
+    
+    Flow:
+      _c10d_functional.wait_tensor → This lowering → SpyreWaitWorkFallback
+      → Generated code: torch.ops.spyre.wait_work() → C++ → work->wait()
     """
-    print(f"[DIRECT LOWERING] _c10d_functional.wait_tensor → No-op (synchronous broadcast)")
+    print(f"\n{'='*70}")
+    print(f"[ASYNC LOWERING] _c10d_functional.wait_tensor")
+    print(f"  → Creating SpyreWaitWorkFallback IR node")
+    print(f"  → Will generate: torch.ops.spyre.wait_work(tensor)")
+    print(f"  → Blocks until async broadcast completes")
+    print(f"{'='*70}\n")
+    
     tensor.realize()
-    return tensor  # No-op for sync collectives
+    return ir.TensorBox.create(
+        SpyreWaitWorkFallback(
+            torch.ops.spyre.wait_work.default,
+            tensor,
+        )
+    )
