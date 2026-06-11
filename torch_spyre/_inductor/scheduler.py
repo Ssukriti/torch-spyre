@@ -57,12 +57,45 @@ class SuperDSCScheduling(BaseScheduling):
         """
         return False
 
+    def _can_fuse_into_spyre_kernel(self, node: BaseSchedulerNode) -> bool:
+        """
+        Check if a node can be fused into a Spyre kernel.
+        
+        HARD BARRIER: Never let host-sync or extern wrapper nodes enter a device kernel.
+        ExternKernels create buffers in the wrapper, but fused kernels expect those
+        buffers as arguments, causing 'buf not in list' errors.
+        """
+        from torch._inductor.ir import ExternKernel
+        from torch_spyre._inductor.ir import (
+            SpyreBroadcastAsyncFallback,
+            SpyreWaitWorkFallback,
+        )
+        
+        # Unpack the underlying IR node if it's wrapped in a SchedulerNode
+        ir_node = node.node if hasattr(node, "node") else node
+        
+        # HARD BARRIER: Never let wait_work or broadcast_async into a kernel
+        if isinstance(ir_node, (SpyreWaitWorkFallback, SpyreBroadcastAsyncFallback)):
+            return False
+        
+        # Also catch generic extern kernels that shouldn't be fused
+        if isinstance(ir_node, ExternKernel):
+            return False
+        
+        return True
+    
     def can_fuse_vertical(
         self, node1: BaseSchedulerNode, node2: BaseSchedulerNode
     ) -> bool:
         """
         Check whether node1 and node2 can be vertically fused or not.
         """
+        # Check if either node is an ExternKernel that can't be fused
+        if not self._can_fuse_into_spyre_kernel(node1):
+            return False
+        if not self._can_fuse_into_spyre_kernel(node2):
+            return False
+        
         # TODO: Revisit this as part of https://github.com/torch-spyre/torch-spyre/issues/826
         return False
 
@@ -72,6 +105,12 @@ class SuperDSCScheduling(BaseScheduling):
         """
         Check whether node1 and node2 can be horizontally fused or not.
         """
+        # Check if either node is an ExternKernel that can't be fused
+        if not self._can_fuse_into_spyre_kernel(node1):
+            return False
+        if not self._can_fuse_into_spyre_kernel(node2):
+            return False
+        
         # TODO: Revisit this as part of https://github.com/torch-spyre/torch-spyre/issues/826
         return False
 
@@ -100,6 +139,7 @@ class SuperDSCScheduling(BaseScheduling):
         ]
         if len(nodes) == 0:
             return
+
 
         node_schedule = self.generate_node_schedule(nodes)
         kernel = SpyreKernel()

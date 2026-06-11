@@ -252,7 +252,17 @@ class SpyreWaitWorkFallback(ir.ExternKernel):
     """IR node for spyre.wait_work — emits a runtime call to synchronize async operation.
     
     This blocks until the async broadcast operation completes.
+    
+    IMPORTANT: This node must NOT be fused into Spyre kernel partitions because:
+    1. It's an ExternKernel that generates Python wrapper code
+    2. Spyre kernel codegen expects all buffers in actuals list
+    3. This creates buf2 outside the kernel, causing 'buf2 not in list' error
     """
+    
+    @property
+    def group(self):
+        """Force this node into its own scheduling group to prevent fusion."""
+        return (type(self), "wait_work_barrier")
 
     def codegen(self, wrapper: PythonWrapperCodegen) -> None:
         """Generate code to call torch.ops.spyre.wait_work at runtime."""
@@ -279,9 +289,21 @@ class SpyreWaitWorkFallback(ir.ExternKernel):
         wrapper.writeline(generated_code)
 
     def should_allocate(self) -> bool:
+        # Don't allocate - wait_work returns the same tensor (in-place)
         return False
+    
+    def has_side_effect(self) -> bool:
+        # Mark as having side effects to prevent incorrect optimizations
+        return True
 
     def get_mutation_names(self) -> Sequence[str]:
+        """MUTATION HINT: Tell Inductor that this operation mutates the input.
+        
+        This forces Inductor to understand the read-after-write dependency
+        across the wait boundary, preventing incorrect reordering.
+        """
+        if self.inputs and hasattr(self.inputs[0], "get_name"):
+            return [self.inputs[0].get_name()]
         return []
 
     def get_unbacked_symbol_defs(self) -> OrderedSet[sympy.Symbol]:
@@ -302,5 +324,11 @@ class SpyreWaitWorkFallback(ir.ExternKernel):
             python_kernel_name="torch.ops.spyre.wait_work",
             op_overload=op_overload,
         )
+        # 1. Register the buffer with Inductor's graph tracking
         self.name = V.graph.register_buffer(self)
+        
+        # NOTE: We do NOT add alias hints here because Spyre's kernel codegen
+        # expects all buffers to be in the actuals list. The mutation hint
+        # in get_mutation_names() is sufficient for dependency tracking.
+            
         V.graph.register_operation(self)

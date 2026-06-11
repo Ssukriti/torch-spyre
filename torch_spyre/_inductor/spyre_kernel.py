@@ -616,6 +616,37 @@ class SpyreKernel(Kernel[CSEVariable]):
         pool_size = getattr(V.graph, "pool_size", 0)
         has_pool_allocations = pool_size > 0
 
+        # CRITICAL FIX: Inject wrapper-generated buffers into actuals
+        # When ExternKernels (like wait_work) create buffers in the wrapper,
+        # those buffers may be consumed by this kernel but not in actuals.
+        # Scan spyre_kernel_args and add any missing buffers from V.graph.buffers.
+        consumed_names = {name for name, _ in self.spyre_kernel_args}
+        
+        print(f"\n[KERNEL DEBUG] Before injection:")
+        print(f"  actuals: {actuals}")
+        print(f"  consumed_names: {consumed_names}")
+        print(f"  V.graph.buffers type: {type(V.graph.buffers)}")
+        
+        # V.graph.buffers might be a list or dict, handle both
+        if hasattr(V.graph.buffers, 'keys'):
+            buffer_names = set(V.graph.buffers.keys())
+        else:
+            # It's a list of buffer objects, get their names
+            buffer_names = {getattr(b, 'name', str(b)) for b in V.graph.buffers if hasattr(b, 'name')}
+        
+        print(f"  buffer_names: {buffer_names}")
+        
+        for name in consumed_names:
+            if name not in actuals:
+                print(f"  → {name} not in actuals")
+                if name in buffer_names:
+                    print(f"    → {name} IS in buffers, adding to actuals")
+                    actuals.append(name)
+                else:
+                    print(f"    → {name} NOT in buffers!")
+
+        print(f"  actuals after injection: {actuals}\n")
+
         for name, tensor_arg in self.spyre_kernel_args:
             tensor_arg.arg_index = actuals.index(name)
             tensor_arg.allocation["hbm"] = SEGMENT_OFFSETS[
