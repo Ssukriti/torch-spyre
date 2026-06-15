@@ -58,6 +58,7 @@ from .constants import DEVICE_NAME
 from .deadcode_elimination import deadcode_elimination
 from .dedup_constants import dedup_and_promote_constants
 from .chunk_large_tensors import chunk_large_tensors
+from .reorder_async_comm import reorder_for_async_overlap
 
 
 logger = get_inductor_logger("passes")
@@ -245,6 +246,7 @@ class CustomPreSchedulingPasses(CustomGraphPass):
         process_hints(operations)
         optimize_restickify_locations(operations)
         finalize_layouts(operations)
+        reorder_for_async_overlap(operations)  # Reorder after layouts are set, before fusion
         insert_restickify(operations)
         insert_bmm_padding(operations)
         dedup_and_promote_constants(operations)
@@ -264,6 +266,7 @@ class CustomPreSchedulingPasses(CustomGraphPass):
     def uuid(self) -> Optional[Any]:
         files = [
             inspect.getfile(deadcode_elimination),
+            inspect.getfile(reorder_for_async_overlap),
             inspect.getfile(dedup_and_promote_constants),
             inspect.getfile(propagate_named_dims),
             inspect.getfile(propagate_spyre_tensor_layouts),
