@@ -40,8 +40,8 @@ struct PendingWork {
 };
 
 // Global map to track pending async operations
-// Key: tensor data pointer (stable across calls), Value: PendingWork
-static std::unordered_map<void*, PendingWork> pending_work_map_;
+// Key: SharedOwnerCtx* (stable per-allocation identity, never reused), Value: PendingWork
+static std::unordered_map<spyre::SharedOwnerCtx*, PendingWork> pending_work_map_;
 static std::mutex work_map_mutex_;
 
 // Helper to convert PyTorch ScalarType to spyre_comms TensorDataTypeEnum
@@ -113,18 +113,21 @@ at::Tensor spyre_broadcast_async_impl(
     TORCH_CHECK(context != nullptr, "Failed to get spyre-comms world context");
   }
 
+  // Validate src_rank is in bounds
+  TORCH_CHECK(src_rank >= 0 &&
+              src_rank < static_cast<int64_t>(context->getSize()),
+              "src_rank out of range: ", src_rank,
+              " (world size is ", context->getSize(), ")");
+
   // Create output tensor
   at::Tensor output = at::empty_like(input);
   TORCH_CHECK(output.nbytes() > 0, "Tensor must have non-zero size for broadcast");
 
-  // Get stable data pointer for map key (this is guaranteed stable)
-  void* data_ptr = output.data_ptr();
-  TORCH_CHECK(data_ptr != nullptr, "Output tensor has null data pointer");
-
-  // Get CompositeAddress pointer for spyre-comms
-  // This pointer is valid as long as the tensor's storage context stays alive.
-  const flex::CompositeAddress* device_addr = get_composite_address(output);
-  TORCH_CHECK(device_addr != nullptr, "Failed to get CompositeAddress from output tensor");
+  // Get SharedOwnerCtx for map key (stable per-allocation identity)
+  auto* ctx = static_cast<spyre::SharedOwnerCtx*>(
+      output.storage().data_ptr().get_context());
+  TORCH_CHECK(ctx != nullptr, "SharedOwnerCtx is null for output tensor");
+  const flex::CompositeAddress* device_addr = &ctx->composite_addr;
 
   // Convert PyTorch tensor metadata to spyre_comms format
   spyre_comms::TensorDataTypeEnum dtype = torch_dtype_to_spyre_comms(input.scalar_type());
@@ -155,8 +158,11 @@ at::Tensor spyre_broadcast_async_impl(
   // Store WorkSchedule in map (do NOT store tensor to avoid allocator conflicts)
   {
     std::lock_guard<std::mutex> lock(work_map_mutex_);
-    pending_work_map_[data_ptr] = PendingWork{std::move(work_schedule)};
-    DEBUGINFO("Stored PendingWork at data_ptr=", data_ptr,
+    TORCH_CHECK(pending_work_map_.find(ctx) == pending_work_map_.end(),
+                "broadcast_async called twice on the same allocation without "
+                "intervening wait_work");
+    pending_work_map_.emplace(ctx, PendingWork{std::move(work_schedule)});
+    DEBUGINFO("Stored PendingWork at ctx=", ctx,
               ", pending_work_map size=", pending_work_map_.size());
   }
 
@@ -167,29 +173,30 @@ at::Tensor spyre_broadcast_async_impl(
 at::Tensor spyre_wait_work_impl(const at::Tensor& tensor) {
   DEBUGINFO("spyre::wait_work called");
 
-  // Get stable data pointer for map lookup
-  void* data_ptr = tensor.data_ptr();
-  TORCH_CHECK(data_ptr != nullptr, "Tensor has null data pointer");
+  // Get SharedOwnerCtx for map lookup
+  auto* ctx = static_cast<spyre::SharedOwnerCtx*>(
+      tensor.storage().data_ptr().get_context());
+  TORCH_CHECK(ctx != nullptr,
+              "SharedOwnerCtx is null — is this tensor from broadcast_async?");
 
+  // Extract WorkSchedule under lock, erase map entry, release lock, then wait
+  std::shared_ptr<spyre_comms::WorkSchedule> work_to_wait;
   {
     std::lock_guard<std::mutex> lock(work_map_mutex_);
-    auto it = pending_work_map_.find(data_ptr);
+    auto it = pending_work_map_.find(ctx);
     TORCH_CHECK(it != pending_work_map_.end(),
-                "No pending async work found for tensor at data_ptr=", data_ptr,
-                ". wait_work must be called on a tensor returned from broadcast_async.");
+                "No pending async work found for tensor. "
+                "wait_work must be called on a tensor returned from broadcast_async.");
 
-    auto& pending = it->second;
-    DEBUGINFO("Found PendingWork at data_ptr=", data_ptr,
-              ", waiting... pending_work_map size=", pending_work_map_.size());
-
-    // Wait for communication to complete while holding lock to keep WorkSchedule alive
-    pending.work->wait();
-    DEBUGINFO("WorkSchedule wait completed");
-
-    // Erase from map
+    work_to_wait = std::move(it->second.work);
     pending_work_map_.erase(it);
-    DEBUGINFO("Erased PendingWork from map");
+    DEBUGINFO("Extracted and erased PendingWork, map size=",
+              pending_work_map_.size());
   }
+
+  // Lock released — concurrent wait_work and broadcast_async can now proceed
+  work_to_wait->wait();
+  DEBUGINFO("WorkSchedule wait completed");
 
   // Return the input tensor (already has the broadcasted data)
   return tensor;
@@ -219,5 +226,3 @@ TORCH_LIBRARY_IMPL(spyre, PrivateUse1, m) {
 // occasional "corrupted double-linked list" errors at process exit.
 // Data loss: None - corruption only occurs during cleanup after completion.
 // TODO: File issue with spyre-comms team about safe WorkSchedule cleanup.
-
-// Made with Bob

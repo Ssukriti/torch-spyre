@@ -64,104 +64,13 @@ if __name__ == "__main__":
     run_demo()
 
 """
-[Gloo] Rank [Gloo] Rank 1 is connected to 1 peer ranks. 0Expected number of connected peer ranks is :  is connected to 11
- peer ranks. Expected number of connected peer ranks is : 1
-Rank 1/2 using device spyreRank 0/2 using device spyre
-
-Rank 0 (ROOT) - Initial tensor: tensor([42., 42., 42., 42.], device='spyre:0')
+Rank 1/2 using device spyre
+Rank 0/2 using device spyre
 Rank 1 - Compiling function...
+Rank 0 (ROOT) - Initial tensor: tensor([42., 42., 42., 42.], device='spyre:0')
 Rank 1 - Executing broadcast
-======================================================================
-[ASYNC LOWERING] _c10d_functional.broadcast
-  → Creating SpyreBroadcastAsyncFallback IR node
-  → src_rank=0, group_name='default'
-  → Will generate: torch.ops.spyre.broadcast_async(tensor, 0, 'default')
-  → Communication starts immediately, returns without waiting
-======================================================================
-
-
-======================================================================
-[ASYNC LOWERING] _c10d_functional.wait_tensor
-  → Creating SpyreWaitWorkFallback IR node
-  → Will generate: torch.ops.spyre.wait_work(tensor)
-  → Blocks until async broadcast completes
-======================================================================
-
-
-======================================================================
-[IR CODEGEN] SpyreBroadcastAsyncFallback.codegen()
-======================================================================
-  Input tensor: buf0
-  src_rank: 0
-  group_name: 'default'
-
-  Generated code:
-    buf1 = torch.ops.spyre.broadcast_async(buf0, 0, 'default')
-
-  This will dispatch to C++ spyre_broadcast_async_impl() at runtime
-  Communication starts immediately, returns without blocking
-======================================================================
-
-
-======================================================================
-[IR CODEGEN] SpyreWaitWorkFallback.codegen()
-======================================================================
-  Input tensor: buf1
-
-  Generated code:
-    buf2 = torch.ops.spyre.wait_work(buf1)
-
-  This will dispatch to C++ spyre_wait_work_impl() at runtime
-  Blocks until async broadcast completes
-======================================================================
-
 Rank 0 - Compiling function...
 Rank 0 - Executing broadcast
-
-======================================================================
-[ASYNC LOWERING] _c10d_functional.broadcast
-  → Creating SpyreBroadcastAsyncFallback IR node
-  → src_rank=0, group_name='default'
-  → Will generate: torch.ops.spyre.broadcast_async(tensor, 0, 'default')
-  → Communication starts immediately, returns without waiting
-======================================================================
-
-
-======================================================================
-[ASYNC LOWERING] _c10d_functional.wait_tensor
-  → Creating SpyreWaitWorkFallback IR node
-  → Will generate: torch.ops.spyre.wait_work(tensor)
-  → Blocks until async broadcast completes
-======================================================================
-
-
-======================================================================
-[IR CODEGEN] SpyreBroadcastAsyncFallback.codegen()
-======================================================================
-  Input tensor: buf0
-  src_rank: 0
-  group_name: 'default'
-
-  Generated code:
-    buf1 = torch.ops.spyre.broadcast_async(buf0, 0, 'default')
-
-  This will dispatch to C++ spyre_broadcast_async_impl() at runtime
-  Communication starts immediately, returns without blocking
-======================================================================
-
-
-======================================================================
-[IR CODEGEN] SpyreWaitWorkFallback.codegen()
-======================================================================
-  Input tensor: buf1
-
-  Generated code:
-    buf2 = torch.ops.spyre.wait_work(buf1)
-
-  This will dispatch to C++ spyre_wait_work_impl() at runtime
-  Blocks until async broadcast completes
-======================================================================
-
 
 
 Rank 1 - After broadcast: tensor([1168., 1168., 1168., 1168.], device='spyre:0')
@@ -176,4 +85,3 @@ Rank 0 - Expected: 1168.0 = (42*2)*2 + 10^3
 
 [Rank 0] Output shape: torch.Size([8, 8])
 """
-# Made with Bob
