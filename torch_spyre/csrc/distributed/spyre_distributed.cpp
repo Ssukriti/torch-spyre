@@ -194,6 +194,7 @@ at::Tensor spyre_wait_work_impl(const at::Tensor& tensor) {
   return pending.output;
 }
 
+
 }  // namespace spyre
 
 // Define the spyre namespace and operations

@@ -33,6 +33,9 @@ from torch._inductor.virtualized import V
 import sympy
 from torch.utils._ordered_set import OrderedSet
 import torch._inductor.ir as ir
+from torch_spyre._inductor.logging_utils import get_inductor_logger
+
+logger = get_inductor_logger("ir")
 
 
 @ir_dataclass
@@ -95,6 +98,7 @@ class FixedTiledLayout(FixedLayout):
         super().__init__(device, dtype, size, stride)
         self.device_layout: SpyreTensorLayout = device_layout
         self.allocation: dict[str, Any] = {}
+        self.per_tile_fixed: bool = False
 
     def __str__(self) -> str:
         device_index_str = "" if self.device.index is None else f":{self.device.index}"
@@ -155,6 +159,9 @@ class SpyreEmptyFallback(ir.ExternKernel):
         pass
 
     def should_allocate(self) -> bool:
+        layout = self.get_layout()
+        if isinstance(layout, FixedTiledLayout) and "pool" in layout.allocation:
+            return False
         return True
 
     def get_mutation_names(self) -> Sequence[str]:
@@ -191,10 +198,6 @@ class SpyreBroadcastAsyncFallback(ir.ExternKernel):
 
     def codegen(self, wrapper: PythonWrapperCodegen) -> None:
         """Generate code to call torch.ops.spyre.broadcast_async at runtime."""
-        print(f"\n{'='*70}")
-        print(f"[IR CODEGEN] SpyreBroadcastAsyncFallback.codegen()")
-        print(f"{'='*70}")
-
         # Get input tensor name
         input_tensor = self.inputs[0]
         input_name = input_tensor.codegen_reference()
@@ -202,19 +205,11 @@ class SpyreBroadcastAsyncFallback(ir.ExternKernel):
         # Get constant args (src_rank, group_name)
         src_rank, group_name = self.constant_args
 
-        print(f"  Input tensor: {input_name}")
-        print(f"  src_rank: {src_rank}")
-        print(f"  group_name: '{group_name}'")
-
         # Generate the async call
         output_name = self.get_name()
         generated_code = f"{output_name} = torch.ops.spyre.broadcast_async({input_name}, {src_rank}, '{group_name}')"
         
-        print(f"\n  Generated code:")
-        print(f"    {generated_code}")
-        print(f"\n  This will dispatch to C++ spyre_broadcast_async_impl() at runtime")
-        print(f"  Communication starts immediately, returns without blocking")
-        print(f"{'='*70}\n")
+        logger.debug(f"Codegen broadcast_async: {input_name} -> {output_name} (src={src_rank}, group='{group_name}')")
         
         wrapper.writeline(generated_code)
 
@@ -256,25 +251,15 @@ class SpyreWaitWorkFallback(ir.ExternKernel):
 
     def codegen(self, wrapper: PythonWrapperCodegen) -> None:
         """Generate code to call torch.ops.spyre.wait_work at runtime."""
-        print(f"\n{'='*70}")
-        print(f"[IR CODEGEN] SpyreWaitWorkFallback.codegen()")
-        print(f"{'='*70}")
-
         # Get input tensor name (the tensor from broadcast_async)
         input_tensor = self.inputs[0]
         input_name = input_tensor.codegen_reference()
-
-        print(f"  Input tensor: {input_name}")
 
         # Generate the wait call
         output_name = self.get_name()
         generated_code = f"{output_name} = torch.ops.spyre.wait_work({input_name})"
         
-        print(f"\n  Generated code:")
-        print(f"    {generated_code}")
-        print(f"\n  This will dispatch to C++ spyre_wait_work_impl() at runtime")
-        print(f"  Blocks until async broadcast completes")
-        print(f"{'='*70}\n")
+        logger.debug(f"Codegen wait_work: {input_name} -> {output_name}")
         
         wrapper.writeline(generated_code)
 
