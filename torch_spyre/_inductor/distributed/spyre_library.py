@@ -38,7 +38,7 @@ def _(x: torch.Tensor, src_rank: int = 0, group_name: str = "default") -> torch.
 
 
 # Wait for async operation to complete
-@torch.library.custom_op("spyre::wait_work", mutates_args=())
+@torch.library.custom_op("spyre::wait_work", mutates_args=("x",))
 def wait_work(x: torch.Tensor) -> torch.Tensor:
     """Wait for async operation to complete.
     
