@@ -99,7 +99,7 @@ void _startRuntime() {
               "Device index out of bounds. logical_device_id=",
               logical_device_id, ", number of visible devices=", num_devices);
 
-  std::shared_ptr<Runtime> runtime;
+  std::shared_ptr<flex::RuntimeContext> runtime;
   auto s = flex::initializeRuntime(&runtime, logical_device_id);
   init_from_env();
   if (runtime) {
@@ -159,6 +159,33 @@ int device_count() {
   return getVisibleDeviceCount();
 }
 
+// Helper function to get CompositeAddress pointer from a Spyre tensor
+// Returns the address as an integer (uintptr_t) that can be passed to Python
+uintptr_t get_composite_address_ptr(const at::Tensor& tensor) {
+  TORCH_CHECK(tensor.is_privateuseone(),
+              "Tensor must be on Spyre device to get CompositeAddress");
+
+  TORCH_CHECK(tensor.is_contiguous(),
+              "Tensor must be contiguous to get CompositeAddress");
+
+  auto* spyre_impl = static_cast<SpyreTensorImpl*>(tensor.unsafeGetTensorImpl());
+  TORCH_CHECK(spyre_impl != nullptr, "SpyreTensorImpl is null");
+
+  auto& storage = spyre_impl->storage();
+  auto* data_ptr = storage.data_ptr().get();
+  TORCH_CHECK(data_ptr != nullptr, "Storage data pointer is null");
+
+  auto* ctx = static_cast<SharedOwnerCtx*>(storage.data_ptr().get_context());
+  TORCH_CHECK(ctx != nullptr, "SharedOwnerCtx is null");
+
+  // Get the CompositeAddress pointer
+  auto* composite_addr = &ctx->composite_addr;
+  auto addr_value = reinterpret_cast<uintptr_t>(composite_addr);
+
+  // Return the address of the CompositeAddress as an integer
+  return addr_value;
+}
+
 }  // namespace spyre
 
 namespace py = pybind11;
@@ -200,7 +227,7 @@ PYBIND11_MODULE(_C, m) {
   py::enum_<spyre::ElementArrangement>(m, "ElementArrangement")
       .value("STANDARD", spyre::ElementArrangement::STANDARD)
       .value("DL16_TO_FP32", spyre::ElementArrangement::DL16_TO_FP32)
-      .value("DL16_TO_FP8", spyre::ElementArrangement::DL16_TO_FP8)
+      .value("QFP8CH", spyre::ElementArrangement::QFP8CH)
       .value("EXX2", spyre::ElementArrangement::EXX2);
 
   py::class_<spyre::SpyreTensorLayout> dci_cls(m, "SpyreTensorLayout");
@@ -387,6 +414,11 @@ PYBIND11_MODULE(_C, m) {
   });
   m.def("device_count", &spyre::device_count);
 
+  // Helper to get CompositeAddress pointer from Spyre tensor
+  m.def("get_composite_address_ptr", &spyre::get_composite_address_ptr,
+        py::arg("tensor"),
+        "Get the CompositeAddress pointer from a Spyre tensor as an integer");
+
 #ifdef USE_SPYRE_CCL
   // Spyre CCL distributed backend
   m.def("createSpyreCCLBackend", &c10d::SpyreCCLBackend::createSpyreCCLBackend,
@@ -443,8 +475,12 @@ PYBIND11_MODULE(_C, m) {
         "        If None, uses the current stream. Defaults to None.\n\n"
         "Returns:\n"
         "    Prepared JobPlan ready for execution");
-  m.def("launch_jobplan", &spyre::launchJobPlan, py::arg("job_plan"),
-        py::arg("args"),
+  // Bind the current-stream overload (resolves the current stream internally).
+  m.def("launch_jobplan",
+        static_cast<void (*)(const spyre::JobPlan&,
+                             const std::vector<at::Tensor>&)>(
+            &spyre::launchJobPlan),
+        py::arg("job_plan"), py::arg("args"),
         "Launch a prepared JobPlan with the given tensor arguments.\n\n"
         "Args:\n"
         "    job_plan: The JobPlan to execute\n"

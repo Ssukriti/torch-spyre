@@ -185,3 +185,60 @@ class SpyreEmptyFallback(ir.ExternKernel):
         )
         self.name = V.graph.register_buffer(self)
         V.graph.register_operation(self)
+
+class SpyreBroadcastFallback(ir.ExternKernel):
+    """IR node for spyre.broadcast — emits a runtime call to the broadcast operation.
+    
+    This is a fallback that generates a call to torch.ops.spyre.broadcast at runtime.
+    The operation takes an input tensor and broadcasts it from src_rank to all ranks.
+    """
+
+    def codegen(self, wrapper: PythonWrapperCodegen) -> None:
+        """Generate code to call torch.ops.spyre.broadcast at runtime."""
+        print(f"\n======SpyreBroadcastFallback.codegen called======")
+
+        # Get input tensor name
+        input_tensor = self.inputs[0]
+        input_name = input_tensor.codegen_reference()
+
+        # Get constant args (src_rank, group_name)
+        src_rank, group_name = self.constant_args
+
+        # Generate the call using wrapper.writeline (same pattern as SpyreConstantFallback)
+        output_name = self.get_name()
+        wrapper.writeline(
+            f"{output_name} = torch.ops.spyre.broadcast({input_name}, {src_rank}, '{group_name}')"
+        )
+        print(f"[CODEGEN] Generated: {output_name} = torch.ops.spyre.broadcast({input_name}, {src_rank}, '{group_name}')")
+
+    def should_allocate(self) -> bool:
+        # Return False - the op returns a new tensor
+        return False
+
+    def get_mutation_names(self) -> Sequence[str]:
+        return []
+
+    def get_unbacked_symbol_defs(self) -> OrderedSet[sympy.Symbol]:
+        return OrderedSet()
+
+    def __init__(
+        self,
+        op_overload: torch._ops.OpOverload,
+        x: IRNode,
+        src_rank: int,
+        group_name: str,
+    ) -> None:
+        # Broadcast returns a tensor with the same layout as input
+        layout = x.get_layout()
+        super().__init__(
+            None,
+            layout,
+            [x],
+            (src_rank, group_name),
+            python_kernel_name="torch.ops.spyre.broadcast",
+            op_overload=op_overload,
+        )
+        # Register this buffer and operation with the graph
+        # Without these calls, the IR node is created but never scheduled/codegen'd
+        self.name = V.graph.register_buffer(self)
+        V.graph.register_operation(self)
